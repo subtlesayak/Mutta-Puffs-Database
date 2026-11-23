@@ -1,0 +1,106 @@
+{
+  "rows": 149,
+  "linked": 148,
+  "mappable": 147,
+  "notes": 9,
+  "countries": {
+    "India": 140,
+    "United Kingdom": 2,
+    "Oman": 1,
+    "Saudi Arabia": 1,
+    "United Arab Emirates": 1
+  },
+  "india_states": {
+    "Kerala": 85,
+    "Tamil Nadu": 26,
+    "Karnataka": 22,
+    "Maharashtra": 4,
+    "Haryana": 1,
+    "Puducherry": 1,
+    "Telangana": 1
+  },
+  "unassigned_country": 2,
+  "unassigned_india_state": 0,
+  "city_areas": {
+    "Kozhikode": 22,
+    "Bengaluru": 20,
+    "Thiruvananthapuram": 17,
+    "Chennai": 14,
+    "Kochi": 12,
+    "Kottayam": 5,
+    "Thrissur": 5,
+    "Kollam": 4,
+    "Malappuram": 4,
+    "Alappuzha": 3,
+    "Coimbatore": 3,
+    "Kannur": 2,
+    "Liverpool": 2,
+    "Pala": 2,
+    "Salalah": 1,
+    "Thalassery": 1
+  },
+  "place_types": {
+    "Bakery or confectionery": 106,
+    "Tea or café": 11,
+    "Unclassified listing": 8,
+    "Landmark or institution": 7,
+    "Store, market or dairy": 7,
+    "Restaurant or snack shop": 5,
+    "Coordinate pin": 4,
+    "Unlinked entry": 1
+  },
+  "link_types": {
+    "Maps listing": 144,
+    "Coordinate pin": 4,
+    "No link": 1
+  },
+  "coordinate_sources": {
+    "Estimated from link": 143,
+    "Explicit pin": 4,
+    "Unavailable": 2
+  },
+  "geography_methods": {
+    "Inside boundary": 140,
+    "Near boundary": 5,
+    "Country unassigned": 2,
+    "No usable position": 2
+  },
+  "note_signals": {
+    "Egg or mutta puff": 5,
+    "Afternoon batch": 1,
+    "Chenna puff": 1,
+    "Evening availability": 1,
+    "Made on site": 1,
+    "Morning availability": 1,
+    "Onion puff": 1,
+    "Sarbath pairing": 1,
+    "Uncut": 1,
+    "Whole egg": 1
+  },
+  "filled_fields": {
+    "Title": 148,
+    "Note": 9,
+    "URL": 148,
+    "Tags": 1,
+    "Comment": 0
+  },
+  "repeated_titles": {
+    "jaya bakery": [
+      116,
+      145
+    ],
+    "malabar bites": [
+      92,
+      96
+    ],
+    "oven fresh bakery": [
+      142,
+      143
+    ]
+  },
+  "repeated_targets": {},
+  "repeated_urls": {},
+  "landmarks": 7,
+  "notes_with_score": 1,
+  "southern_map_rows": 136
+}

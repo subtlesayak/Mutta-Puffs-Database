@@ -14,19 +14,33 @@
 | `Tags` | Labels saved with the entry |
 | `Comment` | Comment field from the export |
 
-## Infographic
+## Browse places and explore the analysis
 
-![The mutta puff trail. The five largest clusters are Kozhikode (22), Bengaluru (20), Thiruvananthapuram (17), Chennai (14), and Kochi (12). The snapshot contains 148 Maps links, 9 saved notes, and 4 coordinate pins.](visuals/mutta-puff-trail.png)
+- [Place directory](analysis/PLACES.md) with clickable Google Maps, Apple Maps, and OpenStreetMap links
+- [Summary and count tables](analysis/README.md)
+- [Interactive report](analysis/index.html) with a searchable list, map provider picker, coverage charts, and contributor notes. Download the HTML and open it in a browser.
+- [Analysis CSV](analysis/places.csv) with the source fields, source row numbers, and derived fields for each entry
+- [Summary JSON](analysis/summary.json) with the counts, coverage gaps, and duplicate checks
 
-The graphic shows the concentration of saved entries and a few contributor tips. The area counts use direct coordinates where available and approximate positions inferred by interpreting the geographic portion of Maps feature IDs as [S2 cells](https://s2geometry.io/devguide/s2cell_hierarchy). A point counts toward the closest selected city centre if it is within 25 km. The radius includes suburbs and nearby towns. The counts describe this list's coverage. One linked entry has no usable location in its URL.
+![The mutta puff trail. Of 149 rows, 147 have usable coordinates and 9 have notes. The list covers 5 countries. Kerala has 85 of the 140 entries assigned to India, followed by Tamil Nadu with 26 and Karnataka with 22.](visuals/mutta-puff-trail.png)
 
-With more contributions, useful follow-ups include a **fresh-batch guide** based on reported times and a **puff varieties chart** based on structured notes about fillings and styles. The current CSV contains nine notes, so the graphic presents individual tips with their place names.
+## Analysis method
 
-### Regenerate the graphic
+- **Geography.** Four direct pins supply coordinates. For other mappable links, the analysis interprets the first Maps feature ID component as an [S2 cell](https://s2geometry.io/devguide/s2cell_hierarchy) and uses its estimated centre. Country and Indian state assignments use [Natural Earth 5.1.2](https://github.com/nvkelso/natural-earth-vector/tree/v5.1.2) public-domain boundaries. A point just outside can be assigned when exactly one boundary is within 2 km. The analysis records this method and leaves ambiguous assignments blank.
+- **City areas.** Each point is counted once at the closest selected city centre within 25 km. Those groups can include suburbs and nearby towns. The map shows a southern India window, with nearby points grouped. Country tables describe the whole list.
+- **Place types.** Title keywords suggest one primary type per entry. The CSV also includes all matching type signals. A hospital, cinema, or other landmark is kept so contributors can identify the actual stall or shop later.
+- **Notes.** Contributor wording is preserved. Topic counts recognise explicit terms for fillings, preparation, availability, and pairings. One note can contribute to several topics. The export has no timestamps, current business hours, prices, or Google review counts.
+- **Duplicates.** Exact URLs and stable Maps targets are checked separately. Similar titles with different targets stay as separate entries. Coordinate pin labels are excluded from the repeated listing-title check.
+- **Map links.** Google Maps opens the original saved link. Apple Maps and OpenStreetMap search by title for listings and use the saved coordinates for direct pins. Alternate providers may return multiple results. **Nive backery** is a tag-only entry and needs a map link.
 
-Run from the repository root with Python 3 and Pillow.
+## Regenerate the report
+
+Run these from the repository root with Python 3. The analysis works offline with the included boundary snapshot. The infographic uses Pillow.
 
 ```sh
+python scripts/analyze.py
 python -m pip install Pillow
 python scripts/build_infographic.py
 ```
+
+To rebuild the boundary snapshot, download the [country GeoJSON](https://raw.githubusercontent.com/nvkelso/natural-earth-vector/v5.1.2/geojson/ne_10m_admin_0_countries.geojson) and [state and province GeoJSON](https://raw.githubusercontent.com/nvkelso/natural-earth-vector/v5.1.2/geojson/ne_10m_admin_1_states_provinces.geojson), then run `python scripts/prepare_boundaries.py /path/to/countries.geojson /path/to/states.geojson`.
