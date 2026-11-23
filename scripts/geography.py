@@ -9,16 +9,20 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 BOUNDARIES = ROOT / "data" / "reference" / "natural-earth-5.1.2.json.gz"
+DISTRICT_BOUNDARIES = ROOT / "data" / "reference" / "geoboundaries-ind-adm2-9469f09.json.gz"
 CITY_RADIUS_KM = 25
 BOUNDARY_TOLERANCE_KM = 2
 CITY_CENTRES = {
     "Alappuzha": (9.498, 76.338), "Bengaluru": (12.972, 77.595),
-    "Chennai": (13.083, 80.271), "Coimbatore": (11.018, 76.972),
-    "Kannur": (11.875, 75.370), "Kochi": (9.981, 76.300), "Kollam": (8.894, 76.614),
+    "Chennai": (13.083, 80.271), "Coimbatore": (11.018, 76.972), "Dubai": (25.205, 55.271),
+    "Gurugram": (28.460, 77.030), "Hyderabad": (17.385, 78.487), "Kannur": (11.875, 75.370),
+    "Kochi": (9.981, 76.300), "Kollam": (8.894, 76.614),
     "Kottayam": (9.591, 76.523), "Kozhikode": (11.258, 75.781), "Liverpool": (53.408, -2.991),
-    "Malappuram": (11.074, 76.075), "Pala": (9.711, 76.685), "Palakkad": (10.787, 76.655),
-    "Salalah": (17.021, 54.092), "Thalassery": (11.748, 75.492),
-    "Thiruvananthapuram": (8.524, 76.937), "Thrissur": (10.528, 76.214),
+    "Malappuram": (11.074, 76.075), "Mangaluru": (12.870, 74.843), "Mumbai": (19.076, 72.878),
+    "Mysuru": (12.296, 76.639), "Pala": (9.711, 76.685), "Palakkad": (10.787, 76.655),
+    "Pune": (18.520, 73.857), "Riyadh": (24.690, 46.690), "Salalah": (17.021, 54.092),
+    "Thalassery": (11.748, 75.492), "Thiruvananthapuram": (8.524, 76.937),
+    "Thrissur": (10.528, 76.214), "Udupi": (13.340, 74.742),
 }
 COORDINATE_PIN = re.compile(r"/maps/search/(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/?$")
 FEATURE_ID = re.compile(r"!1s0x([\da-f]+):0x([\da-f]+)", re.IGNORECASE)
@@ -102,6 +106,8 @@ class Boundaries:
             data = json.load(stream)
         self.countries = self.index(data["countries"])
         self.states = self.index(data["india_states"])
+        with gzip.open(DISTRICT_BOUNDARIES, "rt", encoding="utf-8") as stream:
+            self.districts = self.index(json.load(stream))
 
     @staticmethod
     def index(features):
@@ -160,6 +166,13 @@ class Boundaries:
             state = self.nearby(self.states, point)[0]
             method = "Near boundary" if state else "State unassigned"
         return country, state, method
+
+    def district(self, point):
+        name, _ = self.containing(self.districts, point)
+        if name:
+            return name, "Inside district boundary"
+        name, _ = self.nearby(self.districts, point)
+        return name, "Near district boundary" if name else "District unassigned"
 
     def southern_outlines(self):
         """Only return outlines that intersect the illustrated map bounds."""

@@ -43,6 +43,7 @@ button, input[type=search], select { border: 1px solid var(--control); border-ra
 .hero { padding-block: clamp(2.25rem, 7vw, 5rem) clamp(2.5rem, 5vw, 4rem); }
 .hero .eyebrow, .hero p { color: var(--hero-secondary); }
 .hero p { margin-block: 1rem 0; max-inline-size: 62ch; font-size: 1.0625rem; }
+.hero-action { display: inline-flex; align-items: center; min-block-size: 2.75rem; margin-block-start: 1.25rem; padding: .4rem .875rem; border: 1px solid var(--hero-secondary); border-radius: .375rem; color: var(--hero-text); font-weight: 700; }
 h1, h2, h3 { font-family: var(--serif); line-height: 1.17; letter-spacing: -.018em; text-wrap: balance; }
 h1 { margin: .35rem 0 0; font-size: clamp(2.65rem, 8.3vw, 6.375rem); }
 h2 { margin: 0 0 .5rem; font-size: clamp(1.85rem, 4.4vw, 3rem); }
@@ -73,7 +74,16 @@ figcaption { color: var(--muted); margin-block-start: .75rem; font-size: .875rem
 .bar { display: block; block-size: 100%; border-radius: inherit; background: var(--accent); }
 .rankings { display: grid; gap: 1.5rem; }
 .methods li { margin-block: .5rem; }
-.filter { display: grid; grid-template-columns: minmax(0, 1.4fr) repeat(3, minmax(0, 1fr)); gap: 1rem; align-items: end; }
+.filter { display: grid; grid-template-columns: minmax(0, 1.4fr) repeat(4, minmax(0, 1fr)); gap: 1rem; align-items: end; }
+.nearby { grid-column: 1 / -1; min-inline-size: 0; margin: 0; padding: .75rem 1rem 1rem; border: 1px solid var(--rule); border-radius: .625rem; background: var(--panel); scroll-margin-block-start: 1rem; }
+.nearby legend { padding-inline: .35rem; font: 700 1.25rem/1.2 var(--serif); }
+.nearby-controls { display: flex; flex-wrap: wrap; gap: .625rem 1rem; align-items: end; }
+.nearby-controls .field { flex: 1 1 9rem; max-inline-size: 14rem; }
+.nearby-controls .radius { flex: 0 1 8rem; }
+.locate { background: var(--accent); color: var(--panel); border-color: var(--accent); font-weight: 700; }
+.locate[aria-disabled=true] { cursor: wait; }
+.nearby p { margin-block: .625rem 0; font-size: .875rem; }
+.nearby p:empty { margin: 0; }
 .field { display: grid; gap: .25rem; min-inline-size: 0; }
 .field input, .field select { inline-size: 100%; }
 .filter-actions { display: flex; flex-wrap: wrap; align-items: center; gap: .75rem 1.25rem; grid-column: 1 / -1; }
@@ -84,6 +94,7 @@ figcaption { color: var(--muted); margin-block-start: .75rem; font-size: .875rem
 .result span, .result p, .result a { overflow-wrap: anywhere; }
 .result p { margin: .125rem 0 0; }
 .result .geo { text-align: end; }
+.result .distance { color: var(--accent); }
 .result a { min-block-size: 1.5rem; display: inline-block; }
 .source-notes { padding-inline-start: 1.25rem; }
 .source-notes li { margin-block-end: .75rem; }
@@ -97,10 +108,14 @@ footer { padding-block: 1.5rem 2.25rem; margin-block-start: 3rem; border-block-s
 }
 @media (max-width: 30rem) {
   .filter, .result { grid-template-columns: minmax(0, 1fr); }
+  .nearby-controls .field, .nearby-controls .radius { flex-basis: 100%; max-inline-size: none; }
   .result .geo { text-align: start; }
   .map-label { font-size: 23px; }
 }
-@media (hover: hover) { button:hover { background: var(--track); } }
+@media (hover: hover) {
+  button:not(.locate):hover { background: var(--track); }
+  .locate:hover { text-decoration: underline; }
+}
 </style>
 </head>
 <body>
@@ -109,13 +124,14 @@ footer { padding-block: 1.5rem 2.25rem; margin-block-start: 3rem; border-block-s
   <div class="wrap top">
     <div class="brand">Mutta Puffs Everywhere</div>
     <nav class="nav" aria-label="Report sections">
-      <a href="#geography">Geography</a><a href="#notes">Notes</a><a href="#explore">Explore places</a><a href="#quality">Method</a>
+      <a href="#nearby">Find nearby</a><a href="#geography">Geography</a><a href="#notes">Notes</a><a href="#quality">Method</a>
     </nav>
   </div>
   <div class="wrap hero">
     <div class="eyebrow">Crowdsourced Google Maps list</div>
     <h1>The mutta puff trail</h1>
     <p>See where contributors saved egg puff stops, what they wrote about their visits, and which entries need more detail.</p>
+    <a class="hero-action" href="#nearby">Find nearby places</a>
   </div>
 </header>
 <main class="wrap" id="main" tabindex="-1">
@@ -136,7 +152,10 @@ footer { padding-block: 1.5rem 2.25rem; margin-block-start: 3rem; border-block-s
       </figure>
       <div class="panel rankings">
         <div><h3>Country coverage</h3><ol class="ranking" id="countries"></ol></div>
-        <div><h3>Indian states and territories</h3><ol class="ranking" id="states"></ol></div>
+        <div>
+          <h3>Indian states and territories</h3><ol class="ranking" id="states"></ol>
+          <details><summary>See Indian district counts</summary><ol class="ranking" id="district-counts"></ol></details>
+        </div>
       </div>
     </div>
     <div class="cards">
@@ -162,8 +181,23 @@ footer { padding-block: 1.5rem 2.25rem; margin-block-start: 3rem; border-block-s
     <h2 id="explore-title">Explore saved places</h2>
     <p class="intro" id="map-help">Choose a map, then select a place to open it in a new tab. Apple Maps and OpenStreetMap search by name for listings and use the saved coordinates for direct pins.</p>
     <form class="filter" id="filters" role="search" aria-label="Filter saved places">
+      <fieldset class="nearby" id="nearby">
+        <legend>Find nearby</legend>
+        <div class="nearby-controls">
+          <button class="locate" id="locate" type="button" aria-describedby="nearby-help">Use my location</button>
+          <label class="field">Or choose a city <select name="near-city" id="near-city"><option value="">Select a city</option></select></label>
+          <label class="field radius">Distance <select name="radius" id="radius" disabled>
+            <option value="5">5 km</option><option value="10">10 km</option><option value="25" selected>25 km</option>
+            <option value="50">50 km</option><option value="100">100 km</option><option value="Infinity">Any distance</option>
+          </select></label>
+          <button id="clear-nearby" type="button" hidden>Clear location</button>
+        </div>
+        <p class="subtle" id="nearby-help">Distances are straight-line estimates. Your device location stays in this tab.</p>
+        <p id="location-status" role="status"></p>
+      </fieldset>
       <label class="field">Search places and notes <input type="search" id="search" name="search" placeholder="Dhanya Bakery"></label>
       <label class="field">Country or Indian state <select name="region" id="region"><option value="">All regions</option></select></label>
+      <label class="field">Indian district <select name="district" id="district"><option value="">All districts</option></select></label>
       <label class="field">Place type <select name="type" id="type"><option value="">All types</option></select></label>
       <label class="field">Open places in <select name="provider" id="provider" aria-describedby="map-help"></select></label>
       <div class="filter-actions">
@@ -181,16 +215,18 @@ footer { padding-block: 1.5rem 2.25rem; margin-block-start: 3rem; border-block-s
     <ul class="methods">
       <li>Coordinates come from direct pins or estimated centres of S2 cells in Maps links.</li>
       <li>Country and Indian state labels use Natural Earth 5.1.2. A position outside a boundary can still be assigned if exactly one boundary is within 2 km. City areas use the closest selected city centre within 25 km and can include nearby towns.</li>
+      <li>District estimates use geoBoundaries India ADM2 (2021). District lines may have changed since that snapshot.</li>
       <li>Place types use words in the exported titles. Contributor notes are shown as written, including any reported batch times or ratings.</li>
       <li>The export contains names, links, notes, tags and comments. It has no current opening hours, prices, dates, or Google review counts.</li>
     </ul>
   </section>
 </main>
-<footer class="wrap">Source · MuttaPuffs Everywhere, crowdsourced Google Maps export. <a href="https://www.naturalearthdata.com/">Boundary data by Natural Earth</a>.</footer>
+<footer class="wrap">Source · MuttaPuffs Everywhere, crowdsourced Google Maps export. Country and state boundaries by <a href="https://www.naturalearthdata.com/">Natural Earth</a>. Contains <a href="https://www.geoboundaries.org/api/current/gbOpen/IND/ADM2/">geoBoundaries India ADM2 data</a> under the <a href="https://opendatacommons.org/licenses/odbl/1-0/">Open Database License</a>.</footer>
 <script id="analysis-data" type="application/json"><!-- ANALYSIS_DATA --></script>
 <script>
-const {summary, records, map_providers: providers} = JSON.parse(document.getElementById('analysis-data').textContent);
+const {summary, records, map_providers: providers, city_centres: cityCentres} = JSON.parse(document.getElementById('analysis-data').textContent);
 const number = new Intl.NumberFormat('en');
+const kilometres = new Intl.NumberFormat('en', {maximumFractionDigits: 1});
 const plural = new Intl.PluralRules('en');
 const counted = (count, singular, multiple = singular + 's') => `${number.format(count)} ${plural.select(count) === 'one' ? singular : multiple}`;
 const byId = id => document.getElementById(id);
@@ -226,6 +262,7 @@ byId('geo-intro').textContent = `${number.format(summary.mappable)} links could 
 byId('map-caption').textContent = `${number.format(summary.southern_map_rows)} entries shown in this map window. Larger circles represent more places close together.`;
 ranking('countries', Object.entries(summary.countries));
 ranking('states', Object.entries(summary.india_states));
+ranking('district-counts', Object.entries(summary.india_districts));
 const cities = Object.entries(summary.city_areas);
 ranking('cities', cities.slice(0, 6));
 ranking('more-cities', cities.slice(6), Math.max(1, ...cities.map(([, count]) => count)));
@@ -257,6 +294,21 @@ for (const label of Object.keys(summary.countries).concat(Object.keys(summary.in
   byId('region').add(new Option(label, label));
 }
 byId('region').add(new Option('Country unassigned', 'unassigned'));
+const district = byId('district');
+function districtKey(row) {
+  return row.india_district ? [row.india_district, row.india_state].filter(Boolean).join(' · ') : '';
+}
+function updateDistricts() {
+  const region = byId('region').value;
+  const selected = district.value;
+  const indian = records.filter(row => row.country === 'India' && (!region || region === 'India' || row.india_state === region));
+  const labels = [...new Set(indian.map(districtKey).filter(Boolean))].sort();
+  district.replaceChildren(new Option('All districts', ''), ...labels.map(label => new Option(label, label)));
+  if (indian.some(row => !row.india_district)) district.add(new Option('District unassigned', 'unassigned'));
+  if ([...district.options].some(option => option.value === selected)) district.value = selected;
+  district.disabled = !indian.length;
+}
+updateDistricts();
 for (const label of Object.keys(summary.place_types).sort()) byId('type').add(new Option(label, label));
 const provider = byId('provider');
 const preferenceKey = 'mutta-puffs-map-provider';
@@ -275,19 +327,98 @@ const checkMessages = [
   `${summary.landmarks} titles indicate a landmark or institution, such as a cinema or hospital.`,
 ];
 for (const text of checkMessages) byId('checks').append(element('li', text));
+
+const nearCity = byId('near-city');
+const radius = byId('radius');
+const locate = byId('locate');
+const clearNearby = byId('clear-nearby');
+const locationStatus = byId('location-status');
+const empty = byId('empty');
+let origin = null;
+let locationRequest = 0;
+for (const city of Object.keys(cityCentres).sort()) nearCity.add(new Option(city, city));
+
+function setOrigin(value, message = '') {
+  locationRequest += 1;
+  origin = value;
+  radius.disabled = !value;
+  clearNearby.hidden = !value;
+  locate.removeAttribute('aria-disabled');
+  locationStatus.textContent = message;
+  showResults();
+}
+
+function straightLineKm(aLat, aLon, bLat, bLon) {
+  const radians = degrees => degrees * Math.PI / 180;
+  const halfLatitude = radians(bLat - aLat) / 2;
+  const halfLongitude = radians(bLon - aLon) / 2;
+  const arc = Math.sin(halfLatitude) ** 2
+    + Math.cos(radians(aLat)) * Math.cos(radians(bLat)) * Math.sin(halfLongitude) ** 2;
+  return 12742 * Math.asin(Math.min(1, Math.sqrt(arc)));
+}
+
+function withDistances(rows, point, maxKm) {
+  if (!point) return rows.map(row => ({row}));
+  return rows.filter(row => Number.isFinite(row.latitude) && Number.isFinite(row.longitude))
+    .map(row => ({row, distance: straightLineKm(...point.coords, row.latitude, row.longitude)}))
+    .filter(item => item.distance <= maxKm)
+    .sort((a, b) => a.distance - b.distance || a.row.source_row - b.row.source_row);
+}
+
+locate.addEventListener('click', () => {
+  if (locate.getAttribute('aria-disabled') === 'true') return;
+  if (!navigator.geolocation) {
+    locationStatus.textContent = 'Device location is unavailable. Choose a city to find nearby places.';
+    return;
+  }
+  const request = ++locationRequest;
+  locate.setAttribute('aria-disabled', 'true');
+  clearNearby.hidden = false;
+  locationStatus.textContent = 'Finding your location…';
+  navigator.geolocation.getCurrentPosition(
+    ({coords}) => {
+      if (request !== locationRequest) return;
+      nearCity.value = '';
+      setOrigin({coords: [coords.latitude, coords.longitude], label: 'your location'});
+    },
+    error => {
+      if (request !== locationRequest) return;
+      const message = error.code === 1
+        ? 'Location access is off. Choose a city or allow location in your browser.'
+        : 'Could not get your location. Try again or choose a city.';
+      setOrigin(origin, message);
+    },
+    {timeout: 10000, maximumAge: 60000}
+  );
+});
+
+clearNearby.addEventListener('click', () => {
+  nearCity.value = '';
+  setOrigin(null);
+  locate.focus();
+});
+
 function showResults() {
   const query = byId('search').value.trim().toLocaleLowerCase();
   const region = byId('region').value;
+  const selectedDistrict = district.value;
   const type = byId('type').value;
   const notesOnly = byId('noted').checked;
-  const matches = records.filter(row => {
-    const searchable = [displayName(row), row.note, row.tags, row.comment, row.near_city, row.india_state, row.country].join(' ').toLocaleLowerCase();
+  const filtered = records.filter(row => {
+    const searchable = [displayName(row), row.note, row.tags, row.comment, row.near_city, row.india_district, row.india_state, row.country].join(' ').toLocaleLowerCase();
     const matchesRegion = !region || row.country === region || row.india_state === region || (region === 'unassigned' && !row.country);
-    return matchesRegion && (!type || row.place_type === type) && (!notesOnly || row.note.trim()) && searchable.includes(query);
+    const matchesDistrict = !selectedDistrict || districtKey(row) === selectedDistrict
+      || (selectedDistrict === 'unassigned' && row.country === 'India' && !row.india_district);
+    return matchesRegion && matchesDistrict && (!type || row.place_type === type) && (!notesOnly || row.note.trim()) && searchable.includes(query);
   });
-  byId('result-count').textContent = `${number.format(matches.length)} of ${number.format(records.length)} entries`;
-  byId('empty').hidden = Boolean(matches.length);
-  byId('results').replaceChildren(...matches.map(row => {
+  const maxKm = Number(radius.value);
+  const matches = withDistances(filtered, origin, maxKm);
+  const total = counted(matches.length, 'place');
+  const area = Number.isFinite(maxKm) ? `within ${number.format(maxKm)} km of ${origin?.label}` : `by distance from ${origin?.label}`;
+  byId('result-count').textContent = origin ? `${total} ${area}, nearest first` : `${number.format(matches.length)} of ${number.format(records.length)} entries`;
+  empty.textContent = origin ? 'No places match. Expand the distance or clear other filters.' : 'Try a shorter search or clear the filters to see more places.';
+  empty.hidden = Boolean(matches.length);
+  byId('results').replaceChildren(...matches.map(({row, distance}) => {
     const item = element('li', null, 'result');
     const details = element('div');
     const title = element('strong');
@@ -295,15 +426,28 @@ function showResults() {
     details.append(title, element('p', row.place_type, 'subtle'));
     if (row.note.trim()) details.append(element('p', row.note));
     if (!row[provider.value]) details.append(element('p', 'Map link needed', 'subtle'));
-    const geo = [row.near_city, row.india_state, row.country].filter(Boolean).join(' · ');
+    const districtName = row.india_district && row.india_district + ' district';
+    const geo = [row.near_city, districtName, row.india_state, row.country].filter(Boolean).join(' · ');
     const place = element('div', null, 'geo subtle');
+    if (distance !== undefined) {
+      const label = distance < 0.1 ? 'Under 0.1 km away' : `${kilometres.format(distance)} km away`;
+      place.append(element('strong', label, 'distance number'), element('br'));
+    }
     place.append(element('span', geo || 'Location unassigned'));
-    if (row.geography_method === 'Near boundary') place.append(element('p', 'Near boundary estimate'));
+    if (row.geography_method === 'Near boundary' || row.district_method === 'Near district boundary') {
+      place.append(element('p', 'Near boundary estimate'));
+    }
     item.append(details, place);
     return item;
   }));
 }
 byId('filters').addEventListener('input', event => {
+  if (event.target === byId('region')) updateDistricts();
+  if (event.target === nearCity) {
+    const city = nearCity.value;
+    setOrigin(city ? {coords: cityCentres[city], label: `the centre of ${city}`} : null);
+    return;
+  }
   if (event.target === provider) {
     try { localStorage.setItem(preferenceKey, provider.value); } catch { /* Choice still works for this page. */ }
   }
@@ -314,7 +458,8 @@ byId('clear').addEventListener('click', () => {
   const selectedMap = provider.value;
   byId('filters').reset();
   provider.value = selectedMap;
-  showResults();
+  updateDistricts();
+  setOrigin(null);
   byId('search').focus();
 });
 showResults();

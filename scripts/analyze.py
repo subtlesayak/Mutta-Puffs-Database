@@ -9,7 +9,7 @@ from html import escape
 from pathlib import Path
 from urllib.parse import urlencode, urlsplit
 
-from geography import Boundaries, MAP_BOUNDS, map_reference, nearest_area
+from geography import Boundaries, CITY_CENTRES, MAP_BOUNDS, map_reference, nearest_area
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -85,7 +85,8 @@ def map_links(row):
         links["openstreetmap"] = f"https://www.openstreetmap.org/?mlat={lat}&mlon={lon}#map=18/{lat}/{lon}"
     elif row["title"].strip():
         title = row["title"].strip()
-        context = dict.fromkeys(label for label in (row["near_city"], row["india_state"], row["country"]) if label)
+        locality = row["near_city"] or row["india_district"]
+        context = dict.fromkeys(label for label in (locality, row["india_state"], row["country"]) if label)
         query = ", ".join([title, *context])
         apple_params = {"query": title}
         if lat is not None:
@@ -101,6 +102,7 @@ def analyse(raw_rows, boundaries):
         title, note, url, tags, comment = (raw[field] for field in SOURCE_FIELDS)
         link_type, target, method, point = map_reference(url.strip())
         country, state, geography_method = boundaries.labels(point)
+        district, district_method = boundaries.district(point) if country == "India" else ("", "")
         type_signals = matching_labels(title, PLACE_TYPES)
         if link_type == "Coordinate pin":
             place_type = "Coordinate pin"
@@ -116,7 +118,8 @@ def analyse(raw_rows, boundaries):
             "link_type": link_type, "target_key": target, "name_key": name_key, "coordinate_source": method,
             "latitude": round(point[0], 7 if method == "Explicit pin" else 4) if point else None,
             "longitude": round(point[1], 7 if method == "Explicit pin" else 4) if point else None,
-            "country": country, "india_state": state, "geography_method": geography_method, "near_city": nearest_area(point),
+            "country": country, "india_state": state, "geography_method": geography_method,
+            "india_district": district, "district_method": district_method, "near_city": nearest_area(point),
             "note_signals": matching_labels(note, NOTE_SIGNALS),
             "note_score_out_of_10": int(score[1]) if score else None,
         }
@@ -138,8 +141,10 @@ def analyse(raw_rows, boundaries):
         "rows": len(records), "linked": len(linked), "mappable": len(mapped), "notes": len(notes),
         "countries": ranked(row["country"] for row in records),
         "india_states": ranked(row["india_state"] for row in indian),
+        "india_districts": ranked(district_label(row) for row in indian),
         "unassigned_country": sum(not row["country"] for row in mapped),
         "unassigned_india_state": sum(not row["india_state"] for row in indian),
+        "unassigned_india_district": sum(not row["india_district"] for row in indian),
         "city_areas": ranked(row["near_city"] for row in records),
         "place_types": ranked(row["place_type"] for row in records),
         "link_types": ranked(row["link_type"] for row in records),
@@ -209,7 +214,7 @@ def south_map(boundaries, records):
 def markdown(summary):
     return f"""# Crowdsourced list analysis
 
-[Browse the place directory](PLACES.md), or download the [interactive report](index.html) and open it in your browser. [Analysis CSV](places.csv) · [Summary JSON](summary.json)
+[Find nearby places and filter by district](https://subtlesayak.github.io/Mutta-Puffs-Database/#nearby) · [Place directory](PLACES.md) · [Analysis CSV](places.csv) · [Summary JSON](summary.json)
 
 - **{summary['rows']}** source rows, **{summary['linked']}** Maps links, and **{summary['notes']}** contributor notes
 - **{summary['mappable']}** links with usable coordinates, including **{summary['coordinate_sources'].get('Explicit pin', 0)}** direct pins
@@ -223,17 +228,27 @@ def markdown(summary):
 
 {table(summary['india_states'])}
 
+### Approximate district coverage
+
+{table(summary['india_districts'])}
+
 ### Entries by place type
 
 {table(summary['place_types'])}
 
-Country and state counts are estimates based on the link coordinates and Natural Earth boundaries. Place types come from words in the exported titles. See [methodology](../README.md#analysis-method) for coverage and limits.
+Country and state counts use Natural Earth boundaries. District estimates use geoBoundaries' India ADM2 snapshot. Place types come from words in the exported titles. See [methodology](../README.md#analysis-method) for coverage and limits.
 """
 
 
 def table(counts):
     return "\n".join(["| Group | Entries |", "| --- | ---: |"] +
                      [f"| {label} | {count} |" for label, count in counts.items()])
+
+
+def district_label(row):
+    if not row["india_district"]:
+        return ""
+    return " · ".join(label for label in (row["india_district"], row["india_state"]) if label)
 
 
 def directory(records):
@@ -251,18 +266,25 @@ def directory(records):
     group_order = sorted(groups, key=lambda group: (group == "Location unassigned", -len(groups[group]), group))
     lines = ["# Place directory", "", f"Browse all {len(records)} entries from the crowdsourced MuttaPuffs Everywhere list.", "",
              "Select a place to open its original Google Maps link, or choose Apple Maps or OpenStreetMap. The alternate maps search by name for listings and open saved coordinates for direct pins.", "",
-             "[Read the analysis](README.md) · [Download the interactive report](index.html)", ""]
+             "[Find nearby places and filter by district](https://subtlesayak.github.io/Mutta-Puffs-Database/#nearby) · [Read the analysis](README.md)", ""]
     for group in group_order:
         rows = groups[group]
-        lines.extend([f"## {group} ({len(rows)})", "", "| Place | Alternate maps |", "| --- | --- |"])
-        for row in sorted(rows, key=lambda item: name(item).casefold()):
-            title = text(name(row))
-            google = row["google_maps"]
-            place = f"[{title}](<{google}>)" if google else title
-            alternatives = [f"[{label}](<{row[key]}>)" for key, label in MAP_PROVIDERS.items()
-                            if key != "google_maps" and row[key]]
-            lines.append(f"| {place} | {' · '.join(alternatives) or 'Map link needed'} |")
-        lines.append("")
+        lines.extend([f"## {group} ({len(rows)})", ""])
+        districts = defaultdict(list)
+        for row in rows:
+            districts[row["india_district"] or ""].append(row)
+        for district, entries in sorted(districts.items(), key=lambda item: (not item[0], item[0].casefold())):
+            if district or any(row["country"] == "India" for row in entries):
+                lines.extend([f"### {text(district or 'District unassigned')} ({len(entries)})", ""])
+            lines.extend(["| Place | Alternate maps |", "| --- | --- |"])
+            for row in sorted(entries, key=lambda item: name(item).casefold()):
+                title = text(name(row))
+                google = row["google_maps"]
+                place = f"[{title}](<{google}>)" if google else title
+                alternatives = [f"[{label}](<{row[key]}>)" for key, label in MAP_PROVIDERS.items()
+                                if key != "google_maps" and row[key]]
+                lines.append(f"| {place} | {' · '.join(alternatives) or 'Map link needed'} |")
+            lines.append("")
     return "\n".join(lines)
 
 
@@ -277,6 +299,7 @@ if __name__ == "__main__":
     (OUTPUT / "README.md").write_text(markdown(analysis["summary"]), encoding="utf-8")
     (OUTPUT / "PLACES.md").write_text(directory(analysis["records"]), encoding="utf-8")
     template = (ROOT / "scripts" / "analysis.html").read_text(encoding="utf-8")
-    page_data = json.dumps({**analysis, "map_providers": MAP_PROVIDERS}, ensure_ascii=False, separators=(",", ":")).replace("<", "\\u003c")
+    page_data = json.dumps({**analysis, "map_providers": MAP_PROVIDERS, "city_centres": CITY_CENTRES},
+                           ensure_ascii=False, separators=(",", ":")).replace("<", "\\u003c")
     page = template.replace("<!-- MAP_SHAPES -->", chart).replace("<!-- ANALYSIS_DATA -->", page_data)
     (OUTPUT / "index.html").write_text(page, encoding="utf-8")
