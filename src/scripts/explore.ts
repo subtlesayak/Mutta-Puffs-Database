@@ -1,7 +1,9 @@
 import Fuse from 'fuse.js';
-import {accuracyLabels, formatNumber, locality, path, placeCount, placePath, providerLabels} from '../lib/format';
+import {accuracyLabels, formatNumber, formatPrice, locality, path, placeCount, placePath, providerLabels} from '../lib/format';
 import {browserPosition, distanceKm} from '../lib/distance';
-import type {Place, Provider} from '../lib/types';
+import {metricMatcher} from '../lib/metric-filters';
+import {track} from './analytics';
+import type {Place, PlaceMetrics, Provider} from '../lib/types';
 
 const PAGE_SIZE = 24;
 const PROVIDER_KEY = 'mutta-puffs-map-provider';
@@ -16,7 +18,7 @@ function make<K extends keyof HTMLElementTagNameMap>(tag: K, text = '', classNam
   return item;
 }
 
-function card(place: Place, provider: Provider, distance: number | null) {
+function card(place: Place, provider: Provider, distance: number | null, metric?: PlaceMetrics) {
   const li = make('li', '', 'place-card');
   const name = make('h3');
   const detail = make('a', place.name);
@@ -26,6 +28,8 @@ function card(place: Place, provider: Provider, distance: number | null) {
   if (distance !== null) li.append(make('p', distance < .1 ? 'Under 0.1 km away' : km.format(distance) + ' km away'));
   const tags = make('div', '', 'tags');
   tags.append(make('span', accuracyLabels[place.location.accuracy], place.location.accuracy === 'estimated' ? 'tag estimate' : 'tag'));
+  if (metric?.score) tags.append(make('span', formatNumber(metric.score.score) + '/100 Puff Score · ' + metric.score.count + (metric.score.count === 1 ? ' review' : ' reviews'), 'tag'));
+  if (metric?.price) tags.append(make('span', formatPrice(metric.price.amount,metric.price.currency) + ' last reported', 'tag'));
   li.append(tags);
   const destination = place.map_links[provider];
   if (destination) {
@@ -33,6 +37,7 @@ function card(place: Place, provider: Provider, distance: number | null) {
     link.href = destination;
     link.target = '_blank';
     link.rel = 'noopener noreferrer';
+    link.dataset.directions = provider;
     link.setAttribute('aria-label', place.name + ' in ' + providerLabels[provider] + ' (opens in a new tab)');
     li.append(link);
   } else {
@@ -69,10 +74,12 @@ export async function startExplorer() {
   } catch {}
 
   let places: Place[];
+  let metrics: Record<string,PlaceMetrics> = {};
   try {
-    const response = await fetch(path('api/v1/places.json'));
+    const [response,prices] = await Promise.all([fetch(path('api/v1/places.json')),fetch(path('api/v1/place-metrics.json')).catch(() => null)]);
     if (!response.ok) throw new Error('Places could not be loaded');
     ({places} = await response.json());
+    if (prices?.ok) ({place_metrics:metrics} = await prices.json());
   } catch {
     status.textContent = 'Could not load the full list. Reload the page or open the city directory.';
     return;
@@ -96,14 +103,16 @@ export async function startExplorer() {
   let page = 0;
   let request = 0;
   let origin: {coords: [number, number]; label: string} | null = null;
+  let noResultsTimer: ReturnType<typeof setTimeout> | undefined;
   function render() {
     const query = search.value.trim();
     const matching = query ? index.search(query).map(hit => hit.item.place) : places;
+    const matchesMetric = metricMatcher(form);
     const filtered = matching.filter(p =>
       (!region.value || p.location.state === region.value || p.location.country === region.value || (region.value === 'unassigned' && !p.location.country)) &&
       (!district.value || districtKey(p) === district.value || (district.value === 'unassigned' && p.location.country === 'India' && !p.location.district)) &&
       (!category.value || category.value === p.category) &&
-      (!verification.value || verification.value === p.verification.status) && (!notes.checked || !!p.note));
+      (!verification.value || verification.value === p.verification.status) && (!notes.checked || !!p.note) && matchesMetric(metrics[p.id]));
     const limit = Number(radius.value);
     const distances = filtered.flatMap<{place: Place; distance: number | null}>(place => {
       const {latitude,longitude} = place.location;
@@ -118,7 +127,9 @@ export async function startExplorer() {
     status.textContent = !distances.length
       ? 'No places match. Try a wider distance or clear the filters.'
       : placeCount(distances.length) + (origin ? (Number.isFinite(limit) ? ' within ' + formatNumber(limit) + ' km of ' : ' sorted by distance from ') + origin.label : '');
-    results.replaceChildren(...distances.slice(page * PAGE_SIZE,(page + 1)*PAGE_SIZE).map(({place,distance}) => card(place, provider.value as Provider,distance)));
+    clearTimeout(noResultsTimer);
+    if (!distances.length && query) noResultsTimer = setTimeout(() => track({name:'no_results'}),900);
+    results.replaceChildren(...distances.slice(page * PAGE_SIZE,(page + 1)*PAGE_SIZE).map(({place,distance}) => card(place, provider.value as Provider,distance,metrics[place.id])));
     pagination.hidden = pages <= 1;
     previous.disabled = page === 0;
     next.disabled = page + 1 === pages;
@@ -138,6 +149,7 @@ export async function startExplorer() {
   function chooseCity() {
     const option = city.selectedOptions[0];
     const coordinates = option?.dataset.centre;
+    if (coordinates) track({name:'city_selected',data:{city:option.value}});
     setOrigin(coordinates ? {coords: coordinates.split(',').map(Number) as [number,number], label: option.text + ' city centre'} : null);
   }
   locate.addEventListener('click', () => {

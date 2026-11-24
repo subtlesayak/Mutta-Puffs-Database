@@ -1,0 +1,37 @@
+---
+import Base from '../layouts/Base.astro';
+import {atlas} from '../lib/catalogue';
+import {formatDate, formatNumber, formatPrice, path} from '../lib/format';
+const {series, minimum_shops} = atlas.price_index;
+const monthLabel = (month: string) => new Intl.DateTimeFormat('en-GB', {year:'numeric',month:'long',timeZone:'UTC'}).format(new Date(month + '-01T00:00:00Z'));
+---
+<Base title="Mutta Puff Index" description="Explore the prices people actually paid for mutta puffs, grouped by city, month, and currency.">
+  <div class="shell">
+    <header class="page-head"><p class="kicker">Prices from the counter</p><h1>Mutta Puff Index</h1><p>Compare dated prices reported by the community. Every month shows its sample size and observation dates.</p></header>
+    {series.length ? <div class="series">{series.map(group => {
+      const city = atlas.cities.find(item => item.id === group.city_id)!;
+      return <section class="panel">
+        <header><h2>{city.name} <small>{group.currency}</small></h2><p class="muted">{group.baseline ? 'Index baseline: ' + monthLabel(group.baseline) + ' = 100' : 'Collecting reports for an index baseline'}</p></header>
+        <ul class="periods">{[...group.months].reverse().map(month => <li>
+          <h3>{monthLabel(month.month)}</h3>
+          <p><strong>{formatPrice(month.median, group.currency)}</strong> median · {month.shop_count} {month.shop_count === 1 ? 'shop' : 'shops'}</p>
+          <p>{month.index === null ? 'Sample too small for index' : 'Index ' + formatNumber(month.index)}</p>
+          <p class="muted">{formatDate(month.first_observed)}{month.first_observed !== month.last_observed ? ' to ' + formatDate(month.last_observed) : ''}</p>
+        </li>)}</ul>
+      </section>;
+    })}</div> : <section class="panel empty-panel"><h2>What does a puff cost where you are?</h2><p>There are no approved price reports tied to a city yet. A price, currency and visit date are enough to start.</p><a class="button" href={path('contribute/?kind=observation')}>Report a price</a></section>}
+    <section class="section prose">
+      <h2>How the index is calculated</h2>
+      <p>We use the latest approved price per shop each month and calculate the median for each city and currency. The first month with at least {minimum_shops} shops sets that city and currency’s baseline at 100. Later months need the same sample size to get an index value.</p>
+      <p>Shops, portion sizes and contributors can vary from month to month. The figures describe the reports collected. A city’s cost-of-living trend would need a consistent, representative sample.</p>
+      <p><a href={path('api/v1/price-index.json')}>Download index data</a></p>
+    </section>
+  </div>
+</Base>
+<style>
+  .series {display:grid;gap:1rem;}
+  .series h2 small {color:var(--muted);font:750 .9rem var(--body);}
+  .periods {list-style:none;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,12rem),1fr));gap:.7rem;padding:0;margin-block-end:0;}
+  .periods li {border:1px solid var(--line);border-radius:.65rem;padding:.8rem;}
+  .periods p {margin-block-start:.28rem;}
+</style>

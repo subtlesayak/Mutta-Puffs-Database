@@ -10,7 +10,7 @@ interface Props {title: string; description: string; section?: string; noindex?:
 const {title, description, section, noindex = false} = Astro.props;
 const fullTitle = section === 'Explore' ? 'Mutta Puffs Everywhere · The egg puff atlas' : title + ' · Mutta Puffs Everywhere';
 const canonical = new URL(Astro.url.pathname, siteUrl.origin);
-const nav = [['Explore', ''], ['Puff Map', 'map/'], ['Cities', 'cities/'], ['Insights', 'insights/']];
+const nav = [['Explore', ''], ['Puff Map', 'map/'], ['Cities', 'cities/'], ['Puff Guide', 'guide/'], ['Insights', 'insights/']];
 ---
 <!doctype html>
 <html lang="en">
@@ -56,6 +56,8 @@ const nav = [['Explore', ''], ['Puff Map', 'map/'], ['Cities', 'cities/'], ['Ins
   </body>
 </html>
 <script>
+  import {startAnalytics} from '../scripts/analytics';
   import {enableApp} from '../scripts/pwa';
   enableApp();
+  startAnalytics();
 </script>

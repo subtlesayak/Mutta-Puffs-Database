@@ -2,6 +2,7 @@
 import {atlas} from '../lib/catalogue';
 import {github, path, providerLabels, verificationLabels} from '../lib/format';
 import Icon from './Icon.astro';
+import MetricFilters from './MetricFilters.astro';
 import PlaceCard from './PlaceCard.astro';
 
 const areas = [...new Set(atlas.places.flatMap(p => [p.location.state, p.location.country]).filter((s): s is string => Boolean(s)))].sort();
@@ -44,6 +45,7 @@ const cities = atlas.cities.filter(city => city.centre).sort((a,b) => a.name.loc
         <label class="check"><input type="checkbox" name="notes" /> With contributor notes</label>
         <button type="reset" class="button secondary">Clear filters</button>
       </div>
+      <MetricFilters />
     </form>
     <noscript><p class="muted">The filters need JavaScript. Browse the <a href={path('cities/')}>city directory</a> or the <a href={github + '/blob/main/analysis/PLACES.md'}>complete place list on GitHub</a>.</p></noscript>
     <div class="result-bar">

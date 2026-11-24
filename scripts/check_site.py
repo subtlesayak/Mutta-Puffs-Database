@@ -23,10 +23,15 @@ class Links(HTMLParser):
 def check():
     places = json.loads((DIST / "api/v1/places.json").read_text())["places"]
     cities = json.loads((DIST / "api/v1/cities.json").read_text())["cities"]
-    for route in ("", "map/", "cities/", "insights/", "about/", "contribute/", "analysis/", "share/", "offline/"):
+    trails = json.loads((DIST / "api/v1/trails.json").read_text())["trails"]
+    for route in ("", "map/", "cities/", "insights/", "about/", "contribute/", "analysis/", "share/", "offline/",
+                  "guide/", "leaderboard/", "price-index/", "trails/", "heritage/", "passport/", "roulette/", "wrapped/"):
         assert (DIST / route / "index.html").is_file(), route
     assert all((DIST / "places" / place["id"] / "index.html").is_file() for place in places)
     assert all((DIST / "cities" / city["id"] / "index.html").is_file() for city in cities)
+    assert all((DIST / "trails" / trail["id"] / "index.html").is_file() for trail in trails)
+    for endpoint in ("leaderboard", "place-metrics", "price-index"):
+        assert json.loads((DIST / "api/v1" / (endpoint + ".json")).read_text())["schema_version"] == 1
     assert (DIST / "api/v1/places.geojson").is_file()
     assert all((DIST / "schemas" / "v1" / (kind + ".json")).is_file() for kind in ("place", "review", "observation", "trail"))
     assert (DIST / "images/egg-puff.webp").is_file()
@@ -44,7 +49,7 @@ def check():
             rel = unquote(urlsplit(link).path.removeprefix(BASE))
             target = DIST / rel
             assert target.is_file() or (target / "index.html").is_file(), f"{page.relative_to(DIST)} → {link}"
-    print(f"Checked {len(places)} place pages, {len(cities)} city pages, public data and internal links")
+    print(f"Checked {len(places)} place pages, {len(cities)} city pages, {len(trails)} trails, public data and internal links")
 
 
 if __name__ == "__main__":

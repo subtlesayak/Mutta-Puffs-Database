@@ -22,6 +22,7 @@ const stats = [[atlas.stats.places, 'Saved places'], [Object.keys(atlas.stats.co
       <div class="actions hero-actions">
         <a class="text-link" href="#nearby"><Icon name="location" size={19} /> Find puffs near me</a>
         <a class="text-link" href={path('map/')}><Icon name="map" size={19} /> Open the map</a>
+        <a class="text-link" href={path('roulette/')}>Try Puff Roulette <Icon name="arrow" size={17} /></a>
       </div>
     </div>
     <figure class="hero-visual">
@@ -36,7 +37,7 @@ const stats = [[atlas.stats.places, 'Saved places'], [Object.keys(atlas.stats.co
   <section class="shell section city-section" aria-labelledby="cities-title">
     <header class="heading city-head">
       <div><p class="kicker">Atlas by city</p><h2 id="cities-title">Where to start</h2></div>
-      <a class="text-link" href={path('cities/')}>All cities <Icon name="arrow" size={17} /></a>
+      <div class="actions"><a class="text-link" href={path('trails/')}>Puff Trails</a><a class="text-link" href={path('cities/')}>All cities <Icon name="arrow" size={17} /></a></div>
     </header>
     <ul class="city-cards">
       {spotlight.map(city => <li>

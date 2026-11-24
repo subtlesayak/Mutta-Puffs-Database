@@ -13,6 +13,9 @@ body:
   - type: input
     id: evidence
     attributes: {label: Corrected public pin or reference}
+  - type: input
+    id: verified_on
+    attributes: {label: Date you checked the place, placeholder: YYYY-MM-DD}
   - type: checkboxes
     id: consent
     attributes:

@@ -44,7 +44,8 @@ self.addEventListener('fetch', event => {
   event.respondWith((async () => {
     const cache = await caches.open(CACHE_NAME);
     const navigation = request.mode === 'navigate';
-    if (!navigation) {
+    const dataset = url.pathname.startsWith(route('api/').pathname);
+    if (!navigation && !dataset) {
       const cached = await cache.match(request);
       if (cached) return cached;
     }

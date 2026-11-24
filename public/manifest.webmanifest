@@ -15,7 +15,8 @@
   ],
   "shortcuts": [
     {"name": "Find nearby", "url": "./#nearby"},
-    {"name": "Contribute a place", "url": "./contribute/"}
+    {"name": "Contribute a place", "url": "./contribute/"},
+    {"name": "Open Puff Passport", "url": "./passport/"}
   ],
   "share_target": {
     "action": "./share/",

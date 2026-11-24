@@ -2,8 +2,8 @@
 import Base from '../../layouts/Base.astro';
 import Icon from '../../components/Icon.astro';
 import {atlas} from '../../lib/catalogue';
-import {accuracyLabels, cityPath, formatDate, locality, path, providerLabels, verificationLabels} from '../../lib/format';
-import type {Observation, Place, Provider} from '../../lib/types';
+import {accuracyLabels, cityPath, formatDate, formatNumber, formatPrice, locality, path, providerLabels, verificationLabels} from '../../lib/format';
+import type {Place, Provider} from '../../lib/types';
 
 export function getStaticPaths() {
   return atlas.places.map(place => ({params: {id: place.id}, props: {place}}));
@@ -15,7 +15,7 @@ const city = atlas.cities.find(item => item.name === place.location.city);
 const links = Object.entries(place.map_links) as [Provider, string][];
 const observations = atlas.observations.filter(entry => entry.place_id === place.id).sort((a,b) => b.observed_on.localeCompare(a.observed_on));
 const reviews = atlas.reviews.filter(entry => entry.place_id === place.id).sort((a,b) => b.visited_on.localeCompare(a.visited_on));
-const amount = (price: NonNullable<Observation['price']>) => new Intl.NumberFormat('en-IN', {style:'currency',currency:price.currency}).format(price.amount);
+const score = atlas.place_metrics[place.id]?.score;
 const show = {
   price: observations.find(item => item.price),
   portion: observations.find(item => item.egg_portion),
@@ -40,12 +40,17 @@ const seo = {'@context':'https://schema.org','@type':'Place',name:place.name,des
         <span class="tag">{verificationLabels[place.verification.status]}</span>
         <span class:list={['tag',{estimate: place.location.accuracy === 'estimated'}]}>{accuracyLabels[place.location.accuracy]}</span>
       </div>
+      <div class="actions place-actions">
+        <button class="button secondary small" type="button" aria-pressed="false" data-bookmark={place.id} hidden>Save to Passport</button>
+        <a class="text-link" href={path('passport/?place=' + place.id)}>Log a visit</a>
+      </div>
+      <p class="live-note" data-bookmark-status role="status"></p>
     </header>
     <div class="grid-2 details-grid">
       <section class="panel">
         <h2 class="panel-title">Get there</h2>
         {links.length ?
-          <div class="actions">{links.map(([provider,link]) => <a class="button secondary" href={link} target="_blank" rel="noopener noreferrer">{providerLabels[provider]} <Icon name="external" size={16} /></a>)}</div>
+          <div class="actions">{links.map(([provider,link]) => <a class="button secondary" data-directions={provider} href={link} target="_blank" rel="noopener noreferrer">{providerLabels[provider]} <Icon name="external" size={16} /></a>)}</div>
           : <p class="muted">This entry needs a map link.</p>}
         {place.location.latitude !== null && <a class="text-link" href={path('map/?place=' + place.id)}>Show pin on the Puff Map <Icon name="arrow" size={16} /></a>}
         {place.location.accuracy === 'estimated' && <p class="muted">The saved Maps link gives an approximate area. Use the listing link or share a corrected pin.</p>}
@@ -53,7 +58,7 @@ const seo = {'@context':'https://schema.org','@type':'Place',name:place.name,des
       <section class="panel">
         <h2 class="panel-title">What’s on record</h2>
         <dl class="record">
-          <div><dt>Price per puff</dt><dd>{show.price?.price ? amount(show.price.price) : 'No dated report'}{show.price && <small>{formatDate(show.price.observed_on)} · <a href={show.price.source}>Source</a></small>}</dd></div>
+          <div><dt>Price per puff</dt><dd>{show.price?.price ? formatPrice(show.price.price.amount,show.price.price.currency) : 'No dated report'}{show.price && <small>{formatDate(show.price.observed_on)} · <a href={show.price.source}>Source</a></small>}</dd></div>
           <div><dt>Egg portion</dt><dd>{show.portion?.egg_portion ? portions[show.portion.egg_portion] : 'Unknown'}{show.portion && <small>{formatDate(show.portion.observed_on)} · <a href={show.portion.source}>Source</a></small>}</dd></div>
           <div><dt>Fresh batches</dt><dd>{show.batch?.fresh_batch_times?.join(', ') ?? 'No dated report'}{show.batch && <small>Local time · {formatDate(show.batch.observed_on)} · <a href={show.batch.source}>Source</a></small>}</dd></div>
           <div><dt>Availability</dt><dd>{show.availability?.availability ? stock[show.availability.availability] : 'No dated report'}{show.availability && <small>{formatDate(show.availability.observed_on)} · <a href={show.availability.source}>Source</a></small>}</dd></div>
@@ -62,6 +67,7 @@ const seo = {'@context':'https://schema.org','@type':'Place',name:place.name,des
       {place.note && <section class="panel"><h2 class="panel-title">From the archive</h2><blockquote>{place.note}</blockquote><p class="muted">Contributor note from the original list. Visit date unknown.</p></section>}
       <section class="panel">
         <h2 class="panel-title">Community reviews</h2>
+        {score && <p class="score"><strong>{formatNumber(score.score)}<small>/100</small></strong> Puff Score · {score.count} {score.count === 1 ? 'approved review' : 'approved reviews'} · <a href={path('leaderboard/')}>How it’s scored</a></p>}
         {reviews.length ? <ol class="review-list">{reviews.map(review => <li>
           <p><strong>{formatDate(review.visited_on)}</strong> <a href={review.source}>Submission</a></p>
           <p>{review.note}</p>
@@ -69,9 +75,11 @@ const seo = {'@context':'https://schema.org','@type':'Place',name:place.name,des
         </li>)}</ol> : <p class="muted">This place is waiting for its first approved review.</p>}
         <a class="text-link" href={path('contribute/?kind=review&place=' + place.id)}>Share a puff review <Icon name="arrow" size={16} /></a>
       </section>
-      {place.photos.length > 0 && <section class="panel"><h2 class="panel-title">Community photos</h2><div class="grid-2">
-        {place.photos.map(photo => <figure><img src={photo.url} alt={photo.alt} loading="lazy" referrerpolicy="no-referrer" /><figcaption><a href={photo.source}>{photo.credit}</a> · {photo.license}</figcaption></figure>)}
-      </div></section>}
+      <section class="panel"><h2 class="panel-title">Community photos</h2>{place.photos.length ? <div class="grid-2">
+        {place.photos.map(photo => <figure><img src={photo.url} alt={photo.alt} loading="lazy" referrerpolicy="no-referrer" /><figcaption><a href={photo.source}>{photo.credit}</a> · {photo.license}{photo.captured_on ? ' · ' + formatDate(photo.captured_on) : ''}</figcaption></figure>)}
+      </div> : <p class="muted">This spot is waiting for its first photo.</p>}
+        <a class="text-link" href={path('contribute/?kind=photo&place=' + place.id)}>Share your photo <Icon name="arrow" size={16} /></a>
+      </section>
       <section class="panel">
         <h2 class="panel-title">Source and corrections</h2>
         <p>{place.source.kind === 'original_maps_export' ? 'Original crowdsourced Google Maps export' : 'Community contribution'}{place.source.source_row ? ' · Row ' + place.source.source_row : ''}</p>
@@ -93,4 +101,10 @@ const seo = {'@context':'https://schema.org','@type':'Place',name:place.name,des
   blockquote {margin:0 0 .8rem; padding-inline-start:.8rem; border-inline-start:3px solid var(--line);}
   figure {margin:0;}
   .review-list {padding-inline-start:1.5rem;}
+  .place-actions {margin-block-start:.75rem;}
+  .score strong {font:700 1.75rem var(--display);color:var(--pine);}
 </style>
+<script>
+  import {enablePlaceBookmark} from '../../scripts/passport';
+  enablePlaceBookmark();
+</script>

@@ -1,1 +1,20 @@
-[]
+[
+  {
+    "id": "kozhikode-bakery-trail",
+    "name": "Kozhikode Bakery Trail",
+    "description": "Three bakery listings grouped around central Kozhikode. Start with Cochin Bake House and work north toward Regal Bakes.",
+    "place_ids": ["mpdb-5e23845fe247", "mpdb-8ea04203f9d7", "mpdb-3374859488dd"]
+  },
+  {
+    "id": "bengaluru-iyengar-bakery-run",
+    "name": "Bengaluru Iyengar Bakery Run",
+    "description": "Follow three listings with Iyengar bakery in their names across Bengaluru, from the south of the city toward the east.",
+    "place_ids": ["mpdb-51ccc435ccb5", "mpdb-e3981d2e38e4", "mpdb-f4dfd0701de4"]
+  },
+  {
+    "id": "kochi-bakery-run",
+    "name": "Kochi Bakery Run",
+    "description": "A short list of saved bakeries for exploring greater Kochi, starting with Best Bakers and ending at Dhanya Bakery.",
+    "place_ids": ["mpdb-725b70b1f9ec", "mpdb-976c476a855c", "mpdb-87f30a828dbc"]
+  }
+]

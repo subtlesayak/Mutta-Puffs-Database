@@ -1,0 +1,18 @@
+---
+import {atlas} from '../lib/catalogue';
+const currencies = [...new Set(Object.values(atlas.place_metrics).flatMap(metric => metric.price ? [metric.price.currency] : []))].sort();
+---
+<details class="metric-filters">
+  <summary>Price and Puff Score</summary>
+  <div class="fields">
+    <label class="field">Reported price
+      <select name="price_status"><option value="">Any price status</option><option value="reported">Has a dated price</option></select>
+    </label>
+    {currencies.length > 0 && <>
+      <label class="field">Currency <select name="currency"><option value="">Any currency</option>{currencies.map(currency => <option>{currency}</option>)}</select></label>
+      <label class="field">Maximum price <input name="max_price" type="number" inputmode="decimal" min="0" step="any" placeholder="Choose a currency first" disabled /></label>
+    </>}
+    <label class="field">Puff Score <select name="min_score"><option value="">Any score status</option><option value="1">Has an approved score</option>{[60,70,80,90].map(score => <option value={score}>{score}+ out of 100</option>)}</select></label>
+  </div>
+  <p class="muted">Filters use the latest approved price and the weighted average of approved reviews.</p>
+</details>

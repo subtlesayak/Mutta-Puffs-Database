@@ -6,6 +6,10 @@
 
 Use your device location or choose a city, filter by an Indian district, and open a place in Google Maps, Apple Maps, or OpenStreetMap. Each listing has a permanent link with its source and coordinate accuracy.
 
+The [Puff Guide](https://subtlesayak.github.io/Mutta-Puffs-Database/guide/) brings together curated trails, a nearby Roulette draw, and Puff Heritage stories. Puff Passport saves shops and visits in the current browser. Puff Wrapped uses those visits to make an annual recap you can share.
+
+The [Puff Leaderboard](https://subtlesayak.github.io/Mutta-Puffs-Database/leaderboard/) ranks places with at least three approved, first-hand reviews using confidence-adjusted scores. The [Mutta Puff Index](https://subtlesayak.github.io/Mutta-Puffs-Database/price-index/) publishes monthly medians by city and currency and only computes an index for samples of at least three shops. Price and score filters use approved reports.
+
 ## Install and contribute from Maps
 
 1. Open the atlas in Android Chrome and choose **Install app** from the browser menu or the button on the Contribute page when it appears.
@@ -74,6 +78,10 @@ GitHub Actions validates pull requests and publishes successful builds on `main`
 ### Optional Google Maps basemap
 
 Enable the Maps JavaScript API and billing in your Google Cloud project, create a JavaScript map ID, and make a dedicated browser key restricted to the Maps JavaScript API and the `https://subtlesayak.github.io/*` website referrer. Use repository Actions variables named `PUBLIC_GOOGLE_MAPS_API_KEY` and `PUBLIC_GOOGLE_MAPS_MAP_ID`, then run **Validate and publish the atlas** from the Actions tab. For a local production preview, set the same names in an ignored `.env.local` and allow your preview origin on a separate development key. The browser key is public in the built site. Google Maps loads only when a visitor selects it, and those loads count toward your Google Cloud usage. [Browser key setup](https://developers.google.com/maps/documentation/javascript/get-api-key) · [Map ID setup](https://developers.google.com/maps/documentation/javascript/advanced-markers/start) · [Usage and billing](https://developers.google.com/maps/documentation/javascript/usage-and-billing)
+
+### Optional usage analytics
+
+Add this site to your Umami instance. Set the repository Actions variables `PUBLIC_UMAMI_WEBSITE_ID` to its website ID and `PUBLIC_UMAMI_SEND_URL` to its HTTPS ingestion URL ending in `/api/send`. For Umami Cloud use `https://gateway.umami.is/api/send`. If you self-host, allow the atlas origin to send cross-origin JSON requests. Run **Validate and publish the atlas** to enable the preference under About → Privacy. Each visitor opts in. The client sends page paths, selected city IDs, map app choices, no-result counts, and contribution handoffs. A handoff measures the click to GitHub. Completed contributions can be counted in the repository’s issues. [Umami ingestion API](https://docs.umami.is/docs/api/sending-stats)
 
 To regenerate the archived infographic, run:
 

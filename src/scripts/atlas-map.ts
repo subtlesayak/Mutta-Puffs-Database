@@ -1,19 +1,28 @@
 import maplibregl, {type GeoJSONSource, type MapGeoJSONFeature} from 'maplibre-gl';
 import type {Feature, FeatureCollection, Point} from 'geojson';
 import {accuracyLabels, path, placeCount, placePath} from '../lib/format';
-import type {Accuracy, City} from '../lib/types';
+import {metricMatcher} from '../lib/metric-filters';
+import type {Accuracy, City, PlaceMetrics, Trail} from '../lib/types';
 import type {openGoogleMap} from './google-map';
 
-interface Pin {id: string; name: string; accuracy: Accuracy; status: string; city: string | null; state: string | null}
+interface Pin {id: string; name: string; accuracy: Accuracy; status: string; city: string | null; state: string | null; country: string | null; district: string | null}
 type Pins = FeatureCollection<Point,Pin>;
 
 export async function startMap() {
   const root = document.querySelector<HTMLElement>('[data-atlas-map]');
   if (!root) return;
   const canvas = root.querySelector<HTMLElement>('[data-map-canvas]')!;
+  const frame = root.querySelector<HTMLElement>('[data-map-frame]')!;
+  const list = root.querySelector<HTMLUListElement>('[data-map-list]')!;
+  const form = root.querySelector<HTMLFormElement>('form')!;
   const status = root.querySelector<HTMLElement>('[data-map-status]')!;
   const selection = root.querySelector<HTMLElement>('[data-selection]')!;
   const city = root.querySelector<HTMLSelectElement>('[name=city]')!;
+  const region = root.querySelector<HTMLSelectElement>('[name=region]')!;
+  const district = root.querySelector<HTMLSelectElement>('[name=district]')!;
+  const trail = root.querySelector<HTMLSelectElement>('[name=trail]')!;
+  const verification = root.querySelector<HTMLSelectElement>('[name=verification]')!;
+  const view = root.querySelector<HTMLSelectElement>('[name=view]')!;
   const accuracy = root.querySelector<HTMLSelectElement>('[name=accuracy]')!;
   const place = root.querySelector<HTMLSelectElement>('[name=place]')!;
   const density = root.querySelector<HTMLInputElement>('[name=density]')!;
@@ -27,18 +36,23 @@ export async function startMap() {
   let rendererRequest = 0;
   const motion = matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 420;
   const params = new URLSearchParams(location.search);
-  const urlCity = params.get('city');
   const urlPlace = params.get('place');
-  const unavailable = () => { status.textContent = 'The map is unavailable on this device. Use the place list below.'; };
+  const linkedFilters = [city, region, district, trail, verification, accuracy, view];
+  const unavailable = () => {
+    status.textContent = 'The map is unavailable on this device. Use the place list below.';
+    frame.hidden = true;
+    form.hidden = true;
+  };
 
   let map: maplibregl.Map;
   let pins: Pins;
   let cities: City[];
+  let trails: Trail[];
+  let metrics: Record<string,PlaceMetrics>;
   try {
-    const [pinResponse,cityResponse] = await Promise.all([fetch(path('api/v1/places.geojson')),fetch(path('api/v1/cities.json'))]);
-    if (!pinResponse.ok || !cityResponse.ok) throw new Error('Map data unavailable');
-    pins = await pinResponse.json();
-    ({cities} = await cityResponse.json());
+    const responses = await Promise.all(['places.geojson','cities.json','trails.json','place-metrics.json'].map(file => fetch(path('api/v1/' + file))));
+    if (responses.some(response => !response.ok)) throw new Error('Map data unavailable');
+    [pins, {cities}, {trails}, {place_metrics:metrics}] = await Promise.all(responses.map(response => response.json()));
     map = new maplibregl.Map({
       container: canvas, center: [75.8,11], zoom: 4.5, minZoom: 1, maxZoom: 16,
       style: {version: 8, sources: {
@@ -96,16 +110,25 @@ export async function startMap() {
   let currentPopup: maplibregl.Popup | null = null;
   const saveView = () => {
     const url = new URL(location.href);
-    for (const [key, value] of [['city',city.value],['place',place.value]]) {
-      if (value) url.searchParams.set(key,value); else url.searchParams.delete(key);
+    for (const {name,value} of [...linkedFilters, place]) {
+      if (value && !(name === 'view' && value === 'map')) url.searchParams.set(name,value);
+      else url.searchParams.delete(name);
     }
     history.replaceState(null,'',url);
   };
   const update = () => {
     const selected = cities.find(item => item.id === city.value);
     const allowed = selected ? new Set(selected.place_ids) : null;
-    const points = pins.features.filter(feature =>
-      (!allowed || allowed.has(feature.properties.id)) && (!accuracy.value || feature.properties.accuracy === accuracy.value));
+    const route = trails.find(item => item.id === trail.value);
+    const stops = route ? new Set(route.place_ids) : null;
+    const matchesMetric = metricMatcher(form);
+    const points = pins.features.filter(({properties: pin}) =>
+      (!allowed || allowed.has(pin.id)) && (!stops || stops.has(pin.id)) &&
+      (!region.value || [pin.state,pin.country].includes(region.value)) &&
+      (!district.value || [pin.district,pin.state].filter(Boolean).join(' · ') === district.value) &&
+      (!verification.value || pin.status === verification.value) &&
+      (!accuracy.value || pin.accuracy === accuracy.value) && matchesMetric(metrics[pin.id]));
+    if (route) points.sort((a,b) => route.place_ids.indexOf(a.properties.id) - route.place_ids.indexOf(b.properties.id));
     const data: Pins = {type:'FeatureCollection',features:points};
     (map.getSource('places') as GeoJSONSource).setData(data);
     (map.getSource('density') as GeoJSONSource).setData(data);
@@ -113,9 +136,30 @@ export async function startMap() {
     place.replaceChildren(new Option('Choose a place',''), ...points.slice().sort((a,b)=>a.properties.name.localeCompare(b.properties.name))
       .map(p => new Option(p.properties.name + (p.properties.city ? ' · ' + p.properties.city : ''),p.properties.id)));
     if (points.some(p=>p.properties.id === current)) place.value = current;
-    status.textContent = points.length ? placeCount(points.length) + ' on the map' : 'No pins match these filters.';
+    const showList = view.value === 'list';
+    list.hidden = !showList;
+    frame.hidden = showList;
+    density.disabled = showList || activeRenderer === 'google';
+    place.disabled = showList;
+    if (renderer) renderer.disabled = showList;
+    status.textContent = points.length ? placeCount(points.length) + (showList ? ' in the list' : ' on the map') : 'No pins match these filters. Try a different city or clear a filter.';
+    if (showList) {
+      list.replaceChildren(...points.map(({properties:pin}) => {
+        const li = document.createElement('li');
+        li.className = 'place-card';
+        const link = document.createElement('a');
+        link.href = placePath(pin.id);
+        link.textContent = pin.name;
+        const note = document.createElement('p');
+        note.className = 'muted';
+        note.textContent = [pin.city, accuracyLabels[pin.accuracy]].filter(Boolean).join(' · ');
+        li.append(link,note);
+        return li;
+      }));
+    } else if (activeRenderer === 'atlas') map.resize();
     currentPopup?.remove();
     selection.replaceChildren();
+    if (showList) {saveView(); return;}
     if (activeRenderer === 'google') googleView?.update(points);
     else if (points.length === 1) map.easeTo({center: points[0].geometry.coordinates as [number,number],zoom:11,duration:motion});
     else if (points.length > 1) {
@@ -181,12 +225,16 @@ export async function startMap() {
     console.warn('Atlas map:', event.error.message);
   });
   map.on('load', () => {
-    if (urlCity && cities.some(item=>item.id === urlCity)) city.value = urlCity;
+    for (const filter of linkedFilters) {
+      const requested = params.get(filter.name);
+      if (requested && [...filter.options].some(option => option.value === requested)) filter.value = requested;
+    }
     update();
     const initial = urlPlace && marks.get(urlPlace);
-    if (initial && [...place.options].some(option => option.value === urlPlace)) lookAt(initial);
-    city.addEventListener('change',update);
-    accuracy.addEventListener('change',update);
+    if (initial && view.value !== 'list' && [...place.options].some(option => option.value === urlPlace)) lookAt(initial);
+    for (const filter of linkedFilters) filter.addEventListener('change',update);
+    form.querySelector('.metric-filters')?.addEventListener('input',update);
+    form.addEventListener('submit',event => event.preventDefault());
     renderer?.addEventListener('change',() => {void switchMap();});
     place.addEventListener('change',() => {
       const feature = marks.get(place.value);

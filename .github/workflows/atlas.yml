@@ -39,6 +39,8 @@ jobs:
           ASTRO_TELEMETRY_DISABLED: "1"
           PUBLIC_GOOGLE_MAPS_API_KEY: ${{ vars.PUBLIC_GOOGLE_MAPS_API_KEY }}
           PUBLIC_GOOGLE_MAPS_MAP_ID: ${{ vars.PUBLIC_GOOGLE_MAPS_MAP_ID }}
+          PUBLIC_UMAMI_SEND_URL: ${{ vars.PUBLIC_UMAMI_SEND_URL }}
+          PUBLIC_UMAMI_WEBSITE_ID: ${{ vars.PUBLIC_UMAMI_WEBSITE_ID }}
       - run: python scripts/check_site.py
       - uses: actions/configure-pages@v5
         if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'

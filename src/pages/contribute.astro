@@ -6,11 +6,12 @@ import {github} from '../lib/format';
 const forms = [
   {key:'place',title:'Add a puff spot'}, {key:'correction',title:'Correct a listing'},
   {key:'review',title:'Review an egg puff'}, {key:'observation',title:'Report a price or fresh batch'},
+  {key:'photo',title:'Share a photo'}, {key:'heritage',title:'Share a bakery story'},
 ];
 const places = atlas.places.slice().sort((a,b)=>a.name.localeCompare(b.name));
 const scores = [['pastry','Pastry and flakiness'],['filling','Masala and filling'],['egg','Egg quality'],['freshness','Freshness'],['value','Value for money']];
 ---
-<Base title="Contribute" section="Contribute" description="Add a mutta puff spot, correct a pin, share a first-hand review, or report a dated price and availability.">
+<Base title="Contribute" section="Contribute" description="Share a new puff spot, a correction, a dated report, an original photo, or a bakery story.">
   <div class="shell">
     <header class="page-head"><p class="kicker">Contribute</p><h1>Share what you found.</h1><p>Start with a shop link or a public pin. Review your draft before posting on GitHub.</p></header>
     <div class="contribute-grid">
@@ -41,6 +42,7 @@ const scores = [['pastry','Pastry and flakiness'],['filling','Masala and filling
           <legend>Correction</legend>
           <label class="field">What needs to change? <textarea name="correction" maxlength="900" required placeholder="A corrected pin, shop name, or location detail"></textarea></label>
           <label class="field">Corrected pin or evidence link <input name="evidence" type="url" maxlength="650" placeholder="https://…" /></label>
+          <label class="field">Date you checked the place <input name="verified_on" type="date" /><small>Include how you checked it in your correction.</small></label>
         </fieldset>
         <fieldset class="contribution-fields" data-kind="review" hidden disabled>
           <legend>Your puff review</legend>
@@ -55,6 +57,20 @@ const scores = [['pastry','Pastry and flakiness'],['filling','Masala and filling
           <label class="field">Egg portion <select name="egg_portion"><option value="">Select if known</option><option>Whole egg</option><option>Half egg</option><option>Eggless</option><option>Other</option></select></label>
           <label class="field">Fresh batch times <input name="fresh_batch_times" maxlength="60" placeholder="16:00 local time" /></label>
           <label class="field">Availability <select name="availability"><option value="">Select if known</option><option>Available</option><option>Sold out</option><option>No longer sold</option></select></label>
+        </fieldset>
+        <fieldset class="contribution-fields" data-kind="photo" hidden disabled>
+          <legend>Your original photo</legend>
+          <p>Attach the photo in the GitHub form or add a public link to the image. Use a photo you took, remove location metadata, and keep identifiable people out of the frame.</p>
+          <label class="field">Public image link <input name="photo_url" type="url" maxlength="650" placeholder="Optional if attaching on GitHub" /></label>
+          <label class="field">Describe the photo <textarea name="alt" maxlength="250" required placeholder="What should a reader know about the image?"></textarea></label>
+          <label class="field">Photographer credit <input name="credit" maxlength="120" required /></label>
+          <label class="field">Date taken <input name="captured_on" type="date" /></label>
+        </fieldset>
+        <fieldset class="contribution-fields" data-kind="heritage" hidden disabled>
+          <legend>Bakery story</legend>
+          <label class="field">Story title <input name="story_title" maxlength="120" required /></label>
+          <label class="field">Your story <textarea name="story" maxlength="1800" required placeholder="Name the bakery or region and say how you know the story."></textarea></label>
+          <label class="field">Reference or interview link <input name="story_source" type="url" maxlength="650" /></label>
         </fieldset>
         <p data-form-error role="alert"></p>
         <div class="actions">
@@ -101,6 +117,7 @@ const scores = [['pastry','Pastry and flakiness'],['filling','Masala and filling
 <script>
   import {browserPosition} from '../lib/distance';
   import {contributionDraft, pinLink} from '../lib/share';
+  import {track} from '../scripts/analytics';
   const form = document.querySelector<HTMLFormElement>('[data-contribution]')!;
   const kind = form.querySelector<HTMLSelectElement>('#kind')!;
   const listing = form.querySelector<HTMLSelectElement>('[name=place_id]')!;
@@ -127,7 +144,7 @@ const scores = [['pastry','Pastry and flakiness'],['filling','Masala and filling
       for (const input of group.querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>('input,select,textarea')) input.disabled = group.hidden;
       if (group instanceof HTMLFieldSetElement) group.disabled = group.hidden;
     }
-    linked.hidden = kind.value === 'place';
+    linked.hidden = kind.value === 'place' || kind.value === 'heritage';
     listing.disabled = linked.hidden;
     capture.hidden = kind.value !== 'place' && kind.value !== 'correction';
     if (kind.value === 'correction' && sharedLink && !field('evidence')?.value) field('evidence')!.value = sharedLink;
@@ -203,8 +220,9 @@ const scores = [['pastry','Pastry and flakiness'],['filling','Masala and filling
     const url = new URL(form.dataset.github + '/issues/new');
     url.searchParams.set('template',kind.value + '.yml');
     for (const [key,value] of data) if (String(value).trim()) url.searchParams.set(key,String(value).trim());
-    const title = kind.value === 'place' ? data.get('place_name') : listing.selectedOptions[0].text.split(' · ')[0];
+    const title = data.get('place_name') || data.get('story_title') || listing.selectedOptions[0]?.text.split(' · ')[0];
     url.searchParams.set('title',kind.selectedOptions[0].text + ': ' + title);
+    track({name:'contribution_handoff',data:{kind:kind.value}});
     location.assign(url.href);
   });
   const anchor = new URL(location.href);

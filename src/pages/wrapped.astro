@@ -1,0 +1,114 @@
+---
+import Base from '../layouts/Base.astro';
+import {path} from '../lib/format';
+---
+<Base title="Puff Wrapped" description="Make a shareable year-end recap of the visits in your private Puff Passport.">
+  <div class="shell" data-wrapped>
+    <header class="page-head"><p class="kicker">A year in puffs</p><h1>Puff Wrapped</h1><p>Revisit the bakeries you logged, from the first stop of the year to the one you kept coming back to.</p></header>
+    <noscript><p class="panel">Enable JavaScript to make a recap from your passport.</p></noscript>
+    <p class="live-note" data-wrapped-status role="status"></p>
+    <div class="wrapped-layout" data-wrapped-content hidden>
+      <aside class="panel wrapped-controls">
+        <label class="field">Visit year <select name="year"></select></label>
+        <p class="muted">Your recap uses the visits in this browser. Sharing includes the totals and your most visited bakery. Private notes stay in the passport.</p>
+        <a class="text-link" href={path('passport/')}>Open Puff Passport</a>
+      </aside>
+      <div>
+        <section class="panel empty-panel" data-wrapped-empty hidden><h2>No visits logged this year</h2><p>Log a visit to start your recap.</p><a class="button" href={path('passport/')}>Log a visit</a></section>
+        <section class="recap-card" data-recap hidden aria-labelledby="recap-title">
+          <p class="kicker">Mutta Puffs Everywhere</p><h2 id="recap-title" data-recap-title></h2>
+          <dl class="recap-totals">
+            <div><dt>Visits</dt><dd data-visits></dd></div><div><dt>Bakeries</dt><dd data-places></dd></div>
+            <div><dt>Cities</dt><dd data-cities></dd></div><div><dt>Countries</dt><dd data-countries></dd></div>
+          </dl>
+          <p data-favourite></p><p data-spent></p>
+        </section>
+        <div class="actions" data-share-recap hidden>
+          <button type="button" class="button" data-native-share hidden>Share recap</button>
+          <button type="button" class="button secondary" data-copy-recap>Copy recap</button>
+        </div>
+        <label class="field" data-manual-copy hidden>Recap to copy <textarea readonly rows="6"></textarea></label>
+      </div>
+    </div>
+  </div>
+</Base>
+<style>
+  .wrapped-layout {display:grid;grid-template-columns:minmax(0,.7fr) minmax(0,1.5fr);gap:1rem;align-items:start;}
+  .wrapped-controls {display:grid;gap:.8rem;}
+  .recap-card {background:var(--pine);color:var(--cream);padding:clamp(1.1rem,4vw,2rem);border-radius:var(--round);}
+  .recap-card h2,.recap-card .kicker {color:var(--cream);}
+  .recap-card p {margin-block-start:.5rem;overflow-wrap:anywhere;}
+  .recap-totals {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.6rem;}
+  .recap-totals div {padding:.65rem;border:1px solid var(--sage);border-radius:.5rem;}
+  .recap-totals dd {margin:0;font:700 clamp(1.55rem,4vw,2rem) var(--display);}
+  [data-share-recap] {margin-block-start:.8rem;}
+  @media (max-width:42rem) {.wrapped-layout {grid-template-columns:minmax(0,1fr);}}
+</style>
+<script>
+  import {readPassport, recap} from '../lib/passport';
+  import {formatNumber, formatPrice, path, siteUrl} from '../lib/format';
+  import type {Place} from '../lib/types';
+  const root = document.querySelector<HTMLElement>('[data-wrapped]')!;
+  const find = <T extends HTMLElement>(selector: string) => root.querySelector<T>(selector)!;
+  const status = find<HTMLElement>('[data-wrapped-status]');
+  const year = find<HTMLSelectElement>('[name=year]');
+  const share = find<HTMLButtonElement>('[data-native-share]');
+  const manual = find<HTMLElement>('[data-manual-copy]');
+  const url = new URL(path('wrapped/'),siteUrl.origin).href;
+  let message = '';
+  share.hidden = !navigator.share;
+
+  async function start() {
+    let passport: ReturnType<typeof readPassport>;
+    let places: Place[];
+    try {passport = readPassport(localStorage);}
+    catch {status.textContent = 'Could not read your passport. Check whether this browser allows site storage.'; return;}
+    try {
+      const response = await fetch(path('api/v1/places.json'));
+      if (!response.ok) throw new Error('Could not load places');
+      ({places} = await response.json());
+    } catch {
+      status.textContent = 'The place list is unavailable. Reopen Puff Wrapped when you’re online.';
+      return;
+    }
+    const destinations = new Map(places.map(place => [place.id,{name:place.name,city:place.location.city,country:place.location.country}]));
+    const years = [...new Set([new Date().getFullYear(),...passport.visits.map(visit => Number(visit.date.slice(0,4)))])].sort((a,b) => b - a);
+    year.replaceChildren(...years.map(value => new Option(String(value))));
+    function render() {
+      const totals = recap(passport.visits,Number(year.value),destinations);
+      find('[data-recap]').hidden = find('[data-share-recap]').hidden = !totals.visits;
+      find('[data-wrapped-empty]').hidden = !!totals.visits;
+      manual.hidden = true;
+      status.textContent = '';
+      const title = year.value + ' Puff Wrapped';
+      const favourite = totals.favourite ? 'Most visited: ' + totals.favourite.name + ' (' + totals.favourite.count + (totals.favourite.count === 1 ? ' visit)' : ' visits)') : '';
+      const amounts = Object.entries(totals.spent).map(([currency,amount]) => formatPrice(amount,currency)).join(' + ');
+      const spent = amounts ? 'Recorded spend: ' + amounts + ' from ' + totals.paidVisits + (totals.paidVisits === 1 ? ' visit' : ' visits') : '';
+      find('[data-recap-title]').textContent = title;
+      for (const key of ['visits','places','cities','countries'] as const) find('[data-' + key + ']').textContent = formatNumber(totals[key]);
+      find('[data-favourite]').textContent = favourite;
+      find('[data-spent]').textContent = spent;
+      message = [title, totals.visits + (totals.visits === 1 ? ' visit' : ' visits') + ' · ' + totals.places + (totals.places === 1 ? ' bakery' : ' bakeries') + ' · ' + totals.cities + (totals.cities === 1 ? ' city' : ' cities'), totals.countries + (totals.countries === 1 ? ' country' : ' countries'), favourite, spent].filter(Boolean).join('\n');
+    }
+    year.addEventListener('change',render);
+    render();
+    find('[data-wrapped-content]').hidden = false;
+  }
+  share.addEventListener('click', async () => {
+    try {await navigator.share({title:'My Puff Wrapped',text:message,url});}
+    catch (error) {if (!(error instanceof DOMException && error.name === 'AbortError')) status.textContent = 'Could not share the recap. Try copying it instead.';}
+  });
+  find('[data-copy-recap]').addEventListener('click', async () => {
+    const text = message + '\n' + url;
+    try {await navigator.clipboard.writeText(text); status.textContent = 'Recap copied.';}
+    catch {
+      const field = manual.querySelector('textarea')!;
+      field.value = text;
+      manual.hidden = false;
+      field.focus();
+      field.select();
+      status.textContent = 'Copy the recap from the text field.';
+    }
+  });
+  void start();
+</script>

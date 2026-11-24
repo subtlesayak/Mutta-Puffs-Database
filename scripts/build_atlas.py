@@ -17,10 +17,11 @@ def build():
     write(ROOT / ".atlas" / "data.json", data)
     api = ROOT / "public" / "api" / "v1"
     metadata = {"schema_version": VERSION, "provenance": "https://github.com/subtlesayak/Mutta-Puffs-Database/blob/main/DATA-LICENSE.md"}
-    for key in ("places", "stats", "cities", "trails", "reviews", "observations"):
-        write(api / f"{key}.json", {**metadata, key: data[key]})
+    for key in ("places", "stats", "cities", "trails", "reviews", "observations", "place_metrics"):
+        write(api / f"{key.replace('_', '-')}.json", {**metadata, key: data[key]})
     write(api / "places.geojson", {**place_geojson(data["places"]), **metadata})
-    write(api / "leaderboard.json", {**metadata, "ranking": [], "status": "pending_scoring_policy"})
+    write(api / "leaderboard.json", {**metadata, **data["leaderboard"]})
+    write(api / "price-index.json", {**metadata, **data["price_index"]})
     schemas = ROOT / "public" / "schemas" / "v1"
     schemas.mkdir(parents=True, exist_ok=True)
     for kind in KINDS.values():

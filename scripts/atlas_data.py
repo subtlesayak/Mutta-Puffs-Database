@@ -14,6 +14,7 @@ from urllib.parse import urlsplit
 from jsonschema import Draft202012Validator
 
 from analyze import MAP_PROVIDERS, analyse, normalise_name, read_rows
+from community_metrics import summarize
 from geography import BOUNDARIES, Boundaries, CITY_CENTRES, distance_km, map_reference
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -100,6 +101,9 @@ def validate_places(places):
                 f"Verified coordinates need independent verification for {place['id']}")
         if verification["last_verified"]:
             require(date.fromisoformat(verification["last_verified"]) <= date.today(), f"Future verification date for {place['id']}")
+        for photo in place["photos"]:
+            require("captured_on" not in photo or date.fromisoformat(photo["captured_on"]) <= date.today(),
+                    f"Future photo date for {place['id']}")
         urls = [*place["map_links"].values(), *(photo[key] for photo in place["photos"] for key in ("url", "source"))]
         if place["source"]["reference"]:
             urls.append(place["source"]["reference"])
@@ -158,6 +162,8 @@ def check_references(places, reviews, observations, trails):
         require(date.fromisoformat(record[field]) <= date.today(), f"Future visit or observation in {record['id']}")
     for trail in trails:
         require(set(trail["place_ids"]) <= place_ids, f"Unknown place in trail {trail['id']}")
+    sources = {(review["place_id"], review["source"]) for review in reviews}
+    require(len(sources) == len(reviews), "A review source can only count once per place")
 
 
 def city_directory(places):
@@ -202,7 +208,7 @@ def catalogue(raw_rows=None, approved=None):
         "archive": analysis["summary"], "duplicate_candidates": duplicate_candidates(places),
     }
     return {"schema_version": VERSION, "places": places, "reviews": reviews, "observations": observations,
-            "trails": trails, "cities": cities, "stats": stats}
+            "trails": trails, "cities": cities, "stats": stats, **summarize(reviews, observations, cities)}
 
 
 def place_geojson(places):
@@ -210,7 +216,8 @@ def place_geojson(places):
         {"type": "Feature", "id": p["id"], "geometry": {"type": "Point", "coordinates": [p["location"]["longitude"], p["location"]["latitude"]]},
          "properties": {"id": p["id"], "name": p["name"], "accuracy": p["location"]["accuracy"],
                         "status": p["verification"]["status"], "city": p["location"]["city"],
-                        "district": p["location"]["district"], "state": p["location"]["state"]}}
+                        "district": p["location"]["district"], "state": p["location"]["state"],
+                        "country": p["location"]["country"]}}
         for p in places if p["location"]["latitude"] is not None
     ]}
 

@@ -1,0 +1,24 @@
+name: Share a bakery story
+description: Document a local bakery, recipe, or puff tradition
+title: "Share a bakery story: "
+body:
+  - type: input
+    id: story_title
+    attributes: {label: Story title}
+    validations: {required: true}
+  - type: textarea
+    id: story
+    attributes:
+      label: Your story
+      description: Name the bakery or region. Say what you saw or who told you the story.
+    validations: {required: true}
+  - type: input
+    id: story_source
+    attributes: {label: Public reference or interview link}
+  - type: checkboxes
+    id: consent
+    attributes:
+      label: Publication
+      options:
+        - label: This is my original writing. I have permission to share any interviews and can license this submission under CC BY 4.0.
+          required: true

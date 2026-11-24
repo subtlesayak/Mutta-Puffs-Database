@@ -1,0 +1,34 @@
+name: Share a photo
+description: Submit an original photo of a puff or bakery
+title: "Share a photo: "
+body:
+  - type: input
+    id: place_id
+    attributes: {label: Atlas place ID}
+    validations: {required: true}
+  - type: textarea
+    id: photo_upload
+    attributes:
+      label: Attach your photo
+      description: A public image link below also works. Remove location metadata before you share.
+  - type: input
+    id: photo_url
+    attributes: {label: Public image link}
+  - type: textarea
+    id: alt
+    attributes: {label: Describe the photo for readers who cannot see it}
+    validations: {required: true}
+  - type: input
+    id: credit
+    attributes: {label: Photographer credit}
+    validations: {required: true}
+  - type: input
+    id: captured_on
+    attributes: {label: Date taken, placeholder: YYYY-MM-DD}
+  - type: checkboxes
+    id: consent
+    attributes:
+      label: Publication
+      options:
+        - label: I took this photo and license it for reuse under CC BY 4.0. I removed precise location metadata and kept identifiable people out of the photo.
+          required: true

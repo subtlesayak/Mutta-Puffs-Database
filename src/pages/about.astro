@@ -1,9 +1,11 @@
 ---
 import Base from '../layouts/Base.astro';
 import {github, path} from '../lib/format';
+import {analyticsConfigured} from '../scripts/analytics';
 const files = [
   ['Places','places.json'],['Map points','places.geojson'],['Statistics','stats.json'],['Cities','cities.json'],
-  ['Community reviews','reviews.json'],['Dated observations','observations.json'],['Curated trails','trails.json'],['Leaderboard status','leaderboard.json'],
+  ['Community reviews','reviews.json'],['Dated observations','observations.json'],['Curated trails','trails.json'],['Puff rankings','leaderboard.json'],
+  ['Latest price and score by place','place-metrics.json'],['Mutta Puff Index','price-index.json'],
 ];
 ---
 <Base title="About the atlas" description="Learn what Mutta Puffs Everywhere records, how the open atlas estimates coordinates, and how to download and reuse its data.">
@@ -18,6 +20,13 @@ const files = [
       <p>Version 1 exports are static files. GeoJSON includes entries with usable coordinates and marks their coordinate accuracy. The archive, reference boundaries, and independently submitted data have separate provenance.</p>
       <ul>{files.map(([label,file]) => <li><a href={path('api/v1/' + file)}>{label} · {file}</a></li>)}</ul>
       <p><a href={github + '/blob/main/DATA-LICENSE.md'}>Data sources and licensing</a> · <a href={path('schemas/v1/place.json')}>Place schema v1</a> · <a href={path('insights/')}>Atlas insights</a></p>
+      <h2 id="privacy">Privacy</h2>
+      <p>Passport entries and saved drafts use this browser’s storage. They stay here until you choose to share a recap or continue a contribution on GitHub.</p>
+      {analyticsConfigured ? <>
+        <p>Optional Umami analytics count page visits, chosen cities, directions clicks, searches with no matches, and handoffs to GitHub. The atlas sends page paths and selected public IDs, excluding coordinates, search text, private notes, and draft contents. The analytics host receives the usual connection information, including your IP address and browser.</p>
+        <button class="button secondary" type="button" data-analytics-preference aria-pressed="false">Allow usage analytics</button>
+        <p class="live-note" data-analytics-notice role="status"></p>
+      </> : <p>Usage analytics are off. The atlas uses the published dataset for its public statistics.</p>}
       <h2>Help improve the atlas</h2>
       <p>A pin correction, a dated price, or the name of a stall behind a landmark can be as valuable as a new listing.</p>
       <a class="button" href={path('contribute/')}>Contribute</a>

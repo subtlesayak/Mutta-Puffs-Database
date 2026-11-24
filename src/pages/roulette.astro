@@ -1,0 +1,145 @@
+---
+import Base from '../layouts/Base.astro';
+import Icon from '../components/Icon.astro';
+import {atlas} from '../lib/catalogue';
+import {path, providerLabels} from '../lib/format';
+const cities = atlas.cities.filter(city => city.centre).sort((a,b) => a.name.localeCompare(b.name));
+---
+<Base title="Puff Roulette" description="Pick a random mutta puff stop near you or near a city from the crowdsourced atlas.">
+  <div class="shell">
+    <header class="page-head"><p class="kicker">A bakery detour</p><h1>Puff Roulette</h1><p>Let chance pick your next stop. Choose a city centre or use your location to draw from nearby shops.</p></header>
+    <div class="grid-2 roulette" data-roulette>
+      <form class="panel">
+        <label class="field">City <select name="city"><option value="">Choose a city</option>{cities.map(city => <option value={city.id} data-centre={city.centre!.join(',')}>{city.name}</option>)}</select></label>
+        <div class="actions"><button class="button secondary" type="button" data-device-location><Icon name="location" size={18} /> Use my location</button></div>
+        <p class="muted" data-location>Device location stays in this tab.</p>
+        <label class="field">Search radius <select name="radius">{[5,10,25,50,100].map(km => <option value={km} selected={km === 25}>{km} km</option>)}</select></label>
+        <label class="field">Open in <select name="provider">{Object.entries(providerLabels).map(([value,label]) => <option value={value}>{label}</option>)}</select></label>
+        <button class="button" type="submit" disabled data-draw>Pick a puff spot <Icon name="arrow" size={18} /></button>
+        <p data-roulette-status role="status"></p>
+      </form>
+      <section class="panel roulette-draw" aria-label="Roulette result">
+        <p class="kicker">Your pick</p>
+        <div data-draw-empty><h2>Where will the next puff be?</h2><p>Choose where to look, then draw a spot.</p></div>
+        <div data-pick hidden>
+          <h2 data-pick-name></h2><p data-pick-location></p>
+          <p><span class="tag" data-pick-accuracy></span></p>
+          <p class="muted">Check the shop and puff availability before you go.</p>
+          <div class="actions"><a class="button" data-pick-map target="_blank" rel="noopener noreferrer" href={path('map/')}>Open in Maps</a><a class="text-link" data-pick-place href={path('map/')}>Place details</a></div>
+        </div>
+        <noscript><p>Enable JavaScript for the random draw, or <a href={path('cities/')}>browse by city</a>.</p></noscript>
+      </section>
+    </div>
+  </div>
+</Base>
+<style>
+  .roulette {align-items:start;}
+  .roulette form {display:grid;gap:.75rem;justify-items:start;}
+  .roulette form .field {inline-size:100%;}
+  .roulette-draw {background:var(--butter);}
+  .roulette-draw p {margin-block:.4rem;}
+  .roulette-draw h2 {overflow-wrap:anywhere;}
+</style>
+<script>
+  import {browserPosition, distanceKm} from '../lib/distance';
+  import {accuracyLabels, formatNumber, locality, path, placePath, providerLabels} from '../lib/format';
+  import {track} from '../scripts/analytics';
+  import type {Place, Provider} from '../lib/types';
+  const root = document.querySelector<HTMLElement>('[data-roulette]')!;
+  const find = <T extends HTMLElement>(selector: string) => root.querySelector<T>(selector)!;
+  const form = find<HTMLFormElement>('form');
+  const city = find<HTMLSelectElement>('[name=city]');
+  const radius = find<HTMLSelectElement>('[name=radius]');
+  const provider = find<HTMLSelectElement>('[name=provider]');
+  const status = find('[data-roulette-status]');
+  const locate = find<HTMLButtonElement>('[data-device-location]');
+  const draw = find<HTMLButtonElement>('[data-draw]');
+  const locationLabel = find('[data-location]');
+  let origin: [number,number] | null = null;
+  let last: string | null = null;
+  let pending = 0;
+  let places: Place[] | null = null;
+
+  function clearPick() {
+    last = null;
+    find('[data-pick]').hidden = true;
+    find('[data-draw-empty]').hidden = false;
+  }
+  function setOrigin(point: typeof origin, label: string) {
+    origin = point;
+    draw.disabled = !point || !places;
+    locationLabel.textContent = label;
+    clearPick();
+  }
+  city.addEventListener('change', () => {
+    pending++;
+    locate.disabled = false;
+    const option = city.selectedOptions[0];
+    const centre = option.dataset.centre;
+    if (centre) track({name:'city_selected',data:{city:option.value}});
+    status.textContent = '';
+    setOrigin(centre ? centre.split(',').map(Number) as [number,number] : null, centre ? 'Drawing near ' + option.text + ' city centre.' : 'Choose a city or use device location.');
+  });
+  const requested = new URLSearchParams(location.search).get('city');
+  if ([...city.options].some(option => option.value === requested)) {
+    city.value = requested!;
+    city.dispatchEvent(new Event('change'));
+  }
+  radius.addEventListener('change',clearPick);
+  provider.addEventListener('change',clearPick);
+  locate.addEventListener('click', async () => {
+    if (!navigator.geolocation) {status.textContent = 'Location is unavailable. Choose a city to draw nearby.'; return;}
+    const request = ++pending;
+    locate.disabled = true;
+    status.textContent = 'Finding your location…';
+    try {
+      const point = await browserPosition(navigator.geolocation);
+      if (request !== pending) return;
+      city.value = '';
+      setOrigin(point,'Drawing near your location. It stays in this tab.');
+      status.textContent = '';
+    } catch {
+      if (request === pending) status.textContent = 'Could not get your location. Try again or choose a city.';
+    } finally {if (request === pending) locate.disabled = false;}
+  });
+  form.addEventListener('submit', event => {
+    event.preventDefault();
+    if (!origin || !places) return;
+    const centre = origin;
+    const map = provider.value as Provider;
+    const choices = places.flatMap(place => {
+      const {latitude,longitude} = place.location;
+      if (latitude === null || longitude === null || !place.map_links[map] || ['Coordinate pin','Landmark or institution'].includes(place.category)) return [];
+      const distance = distanceKm(centre,[latitude,longitude]);
+      return distance <= Number(radius.value) ? [{place,distance}] : [];
+    });
+    if (!choices.length) {
+      clearPick();
+      status.textContent = 'No shop matches. Try a wider radius or choose another maps app.';
+      return;
+    }
+    const pool = choices.length > 1 ? choices.filter(item => item.place.id !== last) : choices;
+    const {place, distance} = pool[Math.floor(Math.random() * pool.length)];
+    last = place.id;
+    find('[data-pick-name]').textContent = place.name;
+    find('[data-pick-location]').textContent = [locality(place.location),formatNumber(Math.round(distance * 10) / 10) + ' km away'].filter(Boolean).join(' · ');
+    find('[data-pick-accuracy]').textContent = accuracyLabels[place.location.accuracy];
+    const link = find<HTMLAnchorElement>('[data-pick-map]');
+    link.href = place.map_links[map]!;
+    link.textContent = 'Open in ' + providerLabels[map];
+    link.dataset.directions = map;
+    find<HTMLAnchorElement>('[data-pick-place]').href = placePath(place.id);
+    find('[data-draw-empty]').hidden = true;
+    find('[data-pick]').hidden = false;
+    status.textContent = place.name + ' drawn from ' + choices.length + (choices.length === 1 ? ' nearby shop.' : ' nearby shops.');
+  });
+  async function loadPlaces() {
+    try {
+      const response = await fetch(path('api/v1/places.json'));
+      if (!response.ok) throw new Error('Places unavailable');
+      ({places} = await response.json());
+      draw.disabled = !origin;
+    } catch {status.textContent = 'Could not load the shop list. Reload the page or browse the city directory.';}
+  }
+  void loadPlaces();
+</script>
