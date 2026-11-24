@@ -1,0 +1,51 @@
+"""Check that the built Pages artifact includes and cross-links its public routes."""
+
+import json
+from html.parser import HTMLParser
+from pathlib import Path
+from urllib.parse import unquote, urlsplit
+
+DIST = Path(__file__).resolve().parents[1] / "dist"
+BASE = "/Mutta-Puffs-Database/"
+
+
+class Links(HTMLParser):
+    def __init__(self):
+        super().__init__()
+        self.targets = []
+
+    def handle_starttag(self, tag, attrs):
+        for key, value in attrs:
+            if key in ("href", "src") and value and value.startswith(BASE):
+                self.targets.append(value)
+
+
+def check():
+    places = json.loads((DIST / "api/v1/places.json").read_text())["places"]
+    cities = json.loads((DIST / "api/v1/cities.json").read_text())["cities"]
+    for route in ("", "map/", "cities/", "insights/", "about/", "contribute/", "analysis/", "share/", "offline/"):
+        assert (DIST / route / "index.html").is_file(), route
+    assert all((DIST / "places" / place["id"] / "index.html").is_file() for place in places)
+    assert all((DIST / "cities" / city["id"] / "index.html").is_file() for city in cities)
+    assert (DIST / "api/v1/places.geojson").is_file()
+    assert all((DIST / "schemas" / "v1" / (kind + ".json")).is_file() for kind in ("place", "review", "observation", "trail"))
+    assert (DIST / "images/egg-puff.webp").is_file()
+    assert (DIST / "sitemap.xml").is_file()
+    manifest = json.loads((DIST / "manifest.webmanifest").read_text())
+    assert manifest["scope"] == manifest["start_url"] == "./"
+    assert manifest["share_target"]["action"] == "./share/"
+    assert manifest["share_target"]["method"] == "POST"
+    assert all((DIST / icon["src"]).is_file() for icon in manifest["icons"])
+    assert (DIST / "sw.js").is_file()
+    for page in DIST.rglob("*.html"):
+        parser = Links()
+        parser.feed(page.read_text(encoding="utf-8"))
+        for link in parser.targets:
+            rel = unquote(urlsplit(link).path.removeprefix(BASE))
+            target = DIST / rel
+            assert target.is_file() or (target / "index.html").is_file(), f"{page.relative_to(DIST)} → {link}"
+    print(f"Checked {len(places)} place pages, {len(cities)} city pages, public data and internal links")
+
+
+if __name__ == "__main__":
+    check()

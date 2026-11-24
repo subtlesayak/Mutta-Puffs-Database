@@ -1,8 +1,18 @@
 # Mutta Puffs Database
 
-**MuttaPuffs Everywhere** is a crowdsourced Google Maps list of places people have saved for mutta puffs, also known as egg puffs. The export includes bakeries, tea shops, restaurants, landmarks, and standalone pins. Notes came from contributors and may reflect a particular visit.
+**Mutta Puffs Everywhere** is a community-powered global atlas of mutta puffs, also known as egg puffs. Its source archive is a crowdsourced Google Maps list of bakeries, tea shops, restaurants, landmarks, and standalone pins.
 
-[Find nearby places on the live site](https://subtlesayak.github.io/Mutta-Puffs-Database/#nearby). Use your device location or choose a city, filter by an Indian district, and open a place in Google Maps, Apple Maps, or OpenStreetMap.
+[Explore the atlas](https://subtlesayak.github.io/Mutta-Puffs-Database/) · [Puff Map](https://subtlesayak.github.io/Mutta-Puffs-Database/map/) · [Cities](https://subtlesayak.github.io/Mutta-Puffs-Database/cities/) · [Insights](https://subtlesayak.github.io/Mutta-Puffs-Database/insights/) · [Contribute](https://subtlesayak.github.io/Mutta-Puffs-Database/contribute/)
+
+Use your device location or choose a city, filter by an Indian district, and open a place in Google Maps, Apple Maps, or OpenStreetMap. Each listing has a permanent link with its source and coordinate accuracy.
+
+## Install and contribute from Maps
+
+1. Open the atlas in Android Chrome and choose **Install app** from the browser menu or the button on the Contribute page when it appears.
+2. Open a public shop listing or pin in Maps, tap **Share**, and choose **Mutta Puffs** when it appears in the share sheet.
+3. Review the prefilled draft, complete the shop details, and choose **Continue on GitHub** when ready to submit it for review.
+
+On browsers without share-target support, including iPhone Safari, copy the link and paste it into **Contribute → Paste a shared link or location**. At the shop, you can also choose **Use my current location** to fill in a pin. Drafts can be saved on your device while offline. Your shared link or location stays in the draft until you continue to GitHub.
 
 ## Data
 
@@ -37,16 +47,42 @@
 - **Duplicates.** Exact URLs and stable Maps targets are checked separately. Similar titles with different targets stay as separate entries. Coordinate pin labels are excluded from the repeated listing-title check.
 - **Map links.** Google Maps opens the original saved link. Apple Maps and OpenStreetMap search by title for listings and use the saved coordinates for direct pins. Alternate providers may return multiple results. **Nive backery** is a tag-only entry and needs a map link.
 
-## Regenerate the report
+## Develop and build
 
-Run these from the repository root with Python 3. The analysis works offline with the included boundary snapshot. The infographic uses Pillow.
+Use Node.js 24 and Python 3.12. The analysis runs with the included boundary snapshots.
 
 ```sh
-python scripts/analyze.py
-python -m pip install Pillow
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install -r requirements.txt
+npm ci
+npm run dev
+```
+
+Run the same checks as CI before publishing.
+
+```sh
+python scripts/validate.py
+npm test
+npm run check
+npm run build
+python scripts/check_site.py
+```
+
+GitHub Actions validates pull requests and publishes successful builds on `main` through GitHub Pages. The build generates the Astro site, the v1 API, and the preserved offline report.
+
+### Optional Google Maps basemap
+
+Enable the Maps JavaScript API and billing in your Google Cloud project, create a JavaScript map ID, and make a dedicated browser key restricted to the Maps JavaScript API and the `https://subtlesayak.github.io/*` website referrer. Use repository Actions variables named `PUBLIC_GOOGLE_MAPS_API_KEY` and `PUBLIC_GOOGLE_MAPS_MAP_ID`, then run **Validate and publish the atlas** from the Actions tab. For a local production preview, set the same names in an ignored `.env.local` and allow your preview origin on a separate development key. The browser key is public in the built site. Google Maps loads only when a visitor selects it, and those loads count toward your Google Cloud usage. [Browser key setup](https://developers.google.com/maps/documentation/javascript/get-api-key) · [Map ID setup](https://developers.google.com/maps/documentation/javascript/advanced-markers/start) · [Usage and billing](https://developers.google.com/maps/documentation/javascript/usage-and-billing)
+
+To regenerate the archived infographic, run:
+
+```sh
 python scripts/build_infographic.py
 ```
 
 To rebuild the boundary snapshots, download the [country GeoJSON](https://raw.githubusercontent.com/nvkelso/natural-earth-vector/v5.1.2/geojson/ne_10m_admin_0_countries.geojson), [state and province GeoJSON](https://raw.githubusercontent.com/nvkelso/natural-earth-vector/v5.1.2/geojson/ne_10m_admin_1_states_provinces.geojson), and [district GeoJSON](https://media.githubusercontent.com/media/wmgeolab/geoBoundaries/9469f09/releaseData/gbOpen/IND/ADM2/geoBoundaries-IND-ADM2_simplified.geojson), then run `python scripts/prepare_boundaries.py countries.geojson states.geojson --india-districts districts.geojson`.
 
-The live report is served from `gh-pages`. To publish a report update, copy the generated `analysis/index.html` to `index.html` at the root of that branch and push it.
+## Reuse the data
+
+The [v1 API directory](https://subtlesayak.github.io/Mutta-Puffs-Database/about/#data) links to static JSON and GeoJSON. [Schemas](schemas/) define places, dated observations, reviews, and trails. Approved records go through the [contribution workflow](CONTRIBUTING.md). See [data sources and licensing](DATA-LICENSE.md) for archive and boundary terms.

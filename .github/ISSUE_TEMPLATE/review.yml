@@ -1,0 +1,43 @@
+name: Review an egg puff
+description: Rate a puff you tasted in person
+title: "Review an egg puff: "
+body:
+  - type: input
+    id: place_id
+    attributes: {label: Atlas place ID}
+    validations: {required: true}
+  - type: input
+    id: visited_on
+    attributes: {label: Visit date, placeholder: YYYY-MM-DD}
+    validations: {required: true}
+  - type: input
+    id: pastry
+    attributes: {label: Pastry and flakiness, placeholder: "1 to 10"}
+    validations: {required: true}
+  - type: input
+    id: filling
+    attributes: {label: Masala and filling, placeholder: "1 to 10"}
+    validations: {required: true}
+  - type: input
+    id: egg
+    attributes: {label: Egg quality, placeholder: "1 to 10"}
+    validations: {required: true}
+  - type: input
+    id: freshness
+    attributes: {label: Freshness, placeholder: "1 to 10"}
+    validations: {required: true}
+  - type: input
+    id: value
+    attributes: {label: Value for money, placeholder: "1 to 10"}
+    validations: {required: true}
+  - type: textarea
+    id: review_note
+    attributes: {label: First-hand notes}
+    validations: {required: true}
+  - type: checkboxes
+    id: consent
+    attributes:
+      label: Publication
+      options:
+        - label: This is my own review and I can share it under CC BY 4.0.
+          required: true

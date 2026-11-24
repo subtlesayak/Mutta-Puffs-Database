@@ -1,0 +1,14 @@
+---
+import {accuracyLabels, locality, placePath, providerLabels} from '../lib/format';
+import type {Place, Provider} from '../lib/types';
+
+interface Props {place: Place}
+const {place} = Astro.props;
+const provider = Object.keys(place.map_links)[0] as Provider | undefined;
+---
+<li class="place-card">
+  <h3><a href={placePath(place.id)}>{place.name}</a></h3>
+  <p class="muted">{locality(place.location) || 'Location to be confirmed'}</p>
+  <div class="tags"><span class:list={['tag', {estimate: place.location.accuracy === 'estimated'}]}>{accuracyLabels[place.location.accuracy]}</span></div>
+  {provider && <a class="text-link" href={place.map_links[provider]} target="_blank" rel="noopener noreferrer" aria-label={place.name + ' in ' + providerLabels[provider] + ' (opens in a new tab)'}>Open in {providerLabels[provider]}</a>}
+</li>

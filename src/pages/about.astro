@@ -1,0 +1,26 @@
+---
+import Base from '../layouts/Base.astro';
+import {github, path} from '../lib/format';
+const files = [
+  ['Places','places.json'],['Map points','places.geojson'],['Statistics','stats.json'],['Cities','cities.json'],
+  ['Community reviews','reviews.json'],['Dated observations','observations.json'],['Curated trails','trails.json'],['Leaderboard status','leaderboard.json'],
+];
+---
+<Base title="About the atlas" description="Learn what Mutta Puffs Everywhere records, how the open atlas estimates coordinates, and how to download and reuse its data.">
+  <div class="shell">
+    <header class="page-head"><p class="kicker">About the project</p><h1>No puff left behind.</h1><p>Mutta Puffs Everywhere started as a shared map of places people remembered for egg puffs. It’s a place to record what you found and help someone else find it.</p></header>
+    <div class="prose">
+      <h2>How the map works</h2>
+      <p>The atlas preserves the original crowdsourced export and its contributor notes. Most pins are estimates from saved links. District names come from a dated boundary snapshot, and city areas include nearby towns. Each place page shows the source and the level of coordinate accuracy.</p>
+      <p>Choose device location to sort by straight-line distance. Your location stays in the tab. The basemap is hosted with the atlas, and opening an external map follows that provider’s privacy terms.</p>
+      {import.meta.env.PUBLIC_GOOGLE_MAPS_API_KEY && import.meta.env.PUBLIC_GOOGLE_MAPS_MAP_ID && <p>Choosing the Google basemap connects your browser to Google. <a href="https://www.google.com/intl/en_US/help/terms_maps/">Google Maps terms</a> · <a href="https://policies.google.com/privacy">Google privacy policy</a></p>}
+      <h2 id="data">Open data</h2>
+      <p>Version 1 exports are static files. GeoJSON includes entries with usable coordinates and marks their coordinate accuracy. The archive, reference boundaries, and independently submitted data have separate provenance.</p>
+      <ul>{files.map(([label,file]) => <li><a href={path('api/v1/' + file)}>{label} · {file}</a></li>)}</ul>
+      <p><a href={github + '/blob/main/DATA-LICENSE.md'}>Data sources and licensing</a> · <a href={path('schemas/v1/place.json')}>Place schema v1</a> · <a href={path('insights/')}>Atlas insights</a></p>
+      <h2>Help improve the atlas</h2>
+      <p>A pin correction, a dated price, or the name of a stall behind a landmark can be as valuable as a new listing.</p>
+      <a class="button" href={path('contribute/')}>Contribute</a>
+    </div>
+  </div>
+</Base>

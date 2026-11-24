@@ -1,0 +1,19 @@
+---
+import Base from '../../layouts/Base.astro';
+import Icon from '../../components/Icon.astro';
+import {atlas} from '../../lib/catalogue';
+import {cityPath, placeCount} from '../../lib/format';
+---
+<Base title="City directories" section="Cities" description="Browse saved egg puff spots by city, from Kozhikode and Bengaluru to Liverpool and Salalah.">
+  <div class="shell">
+    <header class="page-head"><p class="kicker">City directories</p><h1>Pick a city.</h1><p>See the places saved near each city. City areas can include nearby towns and suburbs.</p></header>
+    <ul class="place-grid">
+      {atlas.cities.map(city => <li class="place-card">
+        <Icon name="pin" />
+        <h3><a href={cityPath(city.id)}>{city.name}</a></h3>
+        <p class="muted">{[city.state,city.country].filter(Boolean).join(', ')}</p>
+        <p>{placeCount(city.count)}</p>
+      </li>)}
+    </ul>
+  </div>
+</Base>

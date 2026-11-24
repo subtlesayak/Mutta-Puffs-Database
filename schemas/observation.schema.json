@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://subtlesayak.github.io/Mutta-Puffs-Database/schemas/v1/observation.json",
+  "title": "MPDB observation v1",
+  "type": "object", "additionalProperties": false,
+  "required": ["id", "place_id", "observed_on", "source"],
+  "anyOf": [{"required": ["price"]}, {"required": ["egg_portion"]}, {"required": ["fresh_batch_times"]}, {"required": ["availability"]}],
+  "properties": {
+    "id": {"type": "string", "pattern": "^observation-[a-z0-9-]+$"},
+    "place_id": {"type": "string", "pattern": "^mpdb-[a-z0-9]{8,24}$"},
+    "observed_on": {"type": "string", "format": "date"},
+    "source": {"type": "string", "pattern": "^https://github\\.com/subtlesayak/Mutta-Puffs-Database/(issues|pull)/[1-9][0-9]*$"},
+    "price": {
+      "type": "object", "additionalProperties": false,
+      "required": ["amount", "currency"],
+      "properties": {"amount": {"type": "number", "exclusiveMinimum": 0}, "currency": {"type": "string", "pattern": "^[A-Z]{3}$"}}
+    },
+    "egg_portion": {"enum": ["whole", "half", "other", "eggless"]},
+    "fresh_batch_times": {
+      "type": "array", "minItems": 1, "uniqueItems": true,
+      "items": {"type": "string", "pattern": "^(?:[01][0-9]|2[0-3]):[0-5][0-9]$"}
+    },
+    "availability": {"enum": ["available", "sold_out", "no_longer_sold"]}
+  }
+}

@@ -1,0 +1,31 @@
+name: Report a price or fresh batch
+description: Add a dated price, egg portion, batch time or availability
+title: "Report a puff detail: "
+body:
+  - type: input
+    id: place_id
+    attributes: {label: Atlas place ID}
+    validations: {required: true}
+  - type: input
+    id: observed_on
+    attributes: {label: Observation date, placeholder: YYYY-MM-DD}
+    validations: {required: true}
+  - type: input
+    id: price
+    attributes: {label: Price per puff, description: Include currency.}
+  - type: dropdown
+    id: egg_portion
+    attributes: {label: Egg portion, options: [Whole egg, Half egg, Eggless, Other]}
+  - type: input
+    id: fresh_batch_times
+    attributes: {label: Fresh batch times, description: Give local times if known.}
+  - type: dropdown
+    id: availability
+    attributes: {label: Availability, options: [Available, Sold out, No longer sold]}
+  - type: checkboxes
+    id: consent
+    attributes:
+      label: Publication
+      options:
+        - label: These are my observations and I can share them under CC BY 4.0.
+          required: true

@@ -1,0 +1,10 @@
+---
+import Base from '../layouts/Base.astro';
+import {path} from '../lib/format';
+---
+<Base title="Share a place" description="Open a draft for the location or shop link you shared." noindex>
+  <div class="shell">
+    <header class="page-head"><h1>Share a place</h1><p>Open the installed atlas from your maps app’s Share menu. You can also copy the link and paste it into a contribution.</p></header>
+    <a href={path('contribute/')} class="button">Open a contribution</a>
+  </div>
+</Base>

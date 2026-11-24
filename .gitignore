@@ -1,0 +1,14 @@
+node_modules/
+.astro/
+.atlas/
+.venv/
+__pycache__/
+dist/
+public/api/
+public/analysis/
+public/schemas/
+public/basemap.geojson
+public/visuals/
+.DS_Store
+.env
+.env.*

@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://subtlesayak.github.io/Mutta-Puffs-Database/schemas/v1/review.json",
+  "title": "MPDB review v1",
+  "type": "object", "additionalProperties": false,
+  "required": ["id", "place_id", "visited_on", "source", "scores", "note"],
+  "properties": {
+    "id": {"type": "string", "pattern": "^review-[a-z0-9-]+$"},
+    "place_id": {"type": "string", "pattern": "^mpdb-[a-z0-9]{8,24}$"},
+    "visited_on": {"type": "string", "format": "date"},
+    "source": {"type": "string", "pattern": "^https://github\\.com/subtlesayak/Mutta-Puffs-Database/(issues|pull)/[1-9][0-9]*$"},
+    "scores": {
+      "type": "object", "additionalProperties": false,
+      "required": ["pastry", "filling", "egg", "freshness", "value"],
+      "properties": {
+        "pastry": {"$ref": "#/$defs/score"}, "filling": {"$ref": "#/$defs/score"},
+        "egg": {"$ref": "#/$defs/score"}, "freshness": {"$ref": "#/$defs/score"},
+        "value": {"$ref": "#/$defs/score"}
+      }
+    },
+    "note": {"type": "string", "minLength": 1, "maxLength": 2000}
+  },
+  "$defs": {"score": {"type": "integer", "minimum": 1, "maximum": 10}}
+}

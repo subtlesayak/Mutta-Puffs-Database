@@ -1,0 +1,27 @@
+name: Add a puff spot
+description: Share a place where you found mutta puffs
+title: "Add a puff spot: "
+body:
+  - type: input
+    id: place_name
+    attributes: {label: Shop or stall name}
+    validations: {required: true}
+  - type: input
+    id: area
+    attributes: {label: "City, state and neighbourhood"}
+    validations: {required: true}
+  - type: input
+    id: map_link
+    attributes: {label: Public map link}
+    validations: {required: true}
+  - type: textarea
+    id: details
+    attributes: {label: First-hand notes, description: "Include the visit date if you know it."}
+    validations: {required: true}
+  - type: checkboxes
+    id: consent
+    attributes:
+      label: Publication
+      options:
+        - label: I checked for an existing listing and can share my original contribution under CC BY 4.0.
+          required: true

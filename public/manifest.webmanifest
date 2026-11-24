@@ -1,0 +1,26 @@
+{
+  "id": "./",
+  "name": "Mutta Puffs Everywhere",
+  "short_name": "Mutta Puffs",
+  "description": "Discover egg puff spots and share a place with the community atlas.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f9f2e4",
+  "theme_color": "#253f31",
+  "icons": [
+    {"src": "./icons/puff-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any"},
+    {"src": "./icons/puff-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any"},
+    {"src": "./icons/puff-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"}
+  ],
+  "shortcuts": [
+    {"name": "Find nearby", "url": "./#nearby"},
+    {"name": "Contribute a place", "url": "./contribute/"}
+  ],
+  "share_target": {
+    "action": "./share/",
+    "method": "POST",
+    "enctype": "application/x-www-form-urlencoded",
+    "params": {"title": "title", "text": "text", "url": "url"}
+  }
+}

@@ -1,0 +1,87 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://subtlesayak.github.io/Mutta-Puffs-Database/schemas/v1/place.json",
+  "title": "MPDB place v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "name", "category", "location", "verification", "source", "map_links", "note", "photos"],
+  "properties": {
+    "id": {"type": "string", "pattern": "^mpdb-[a-z0-9]{8,24}$"},
+    "name": {"type": "string", "minLength": 1, "maxLength": 200, "pattern": "\\S"},
+    "category": {"type": "string", "minLength": 1, "maxLength": 100},
+    "location": {
+      "type": "object", "additionalProperties": false,
+      "required": ["latitude", "longitude", "accuracy", "locality", "city", "district", "state", "country"],
+      "properties": {
+        "latitude": {"type": ["number", "null"], "minimum": -90, "maximum": 90},
+        "longitude": {"type": ["number", "null"], "minimum": -180, "maximum": 180},
+        "accuracy": {"enum": ["estimated", "source_pin", "verified", "unknown"]},
+        "locality": {"type": ["string", "null"], "minLength": 1},
+        "city": {"type": ["string", "null"], "minLength": 1},
+        "district": {"type": ["string", "null"], "minLength": 1},
+        "state": {"type": ["string", "null"], "minLength": 1},
+        "country": {"type": ["string", "null"], "minLength": 1}
+      },
+      "allOf": [{
+        "if": {"properties": {"accuracy": {"const": "unknown"}}},
+        "then": {"properties": {"latitude": {"type": "null"}, "longitude": {"type": "null"}}},
+        "else": {"properties": {"latitude": {"type": "number"}, "longitude": {"type": "number"}}}
+      }]
+    },
+    "verification": {
+      "type": "object", "additionalProperties": false,
+      "required": ["status", "last_verified", "reference"],
+      "properties": {
+        "status": {"enum": ["unverified", "needs_details", "verified"]},
+        "last_verified": {"type": ["string", "null"], "format": "date"},
+        "reference": {"type": ["string", "null"], "pattern": "^https://github\\.com/subtlesayak/Mutta-Puffs-Database/(issues|pull)/[1-9][0-9]*$"}
+      },
+      "allOf": [{
+        "if": {"properties": {"status": {"const": "verified"}}},
+        "then": {"properties": {"last_verified": {"type": "string"}, "reference": {"type": "string"}}},
+        "else": {"properties": {"last_verified": {"type": "null"}}}
+      }]
+    },
+    "source": {
+      "type": "object", "additionalProperties": false,
+      "required": ["kind", "reference", "source_row", "import_key"],
+      "properties": {
+        "kind": {"enum": ["original_maps_export", "community"]},
+        "reference": {"type": ["string", "null"], "pattern": "^https://"},
+        "source_row": {"type": ["integer", "null"], "minimum": 2},
+        "import_key": {"type": ["string", "null"], "minLength": 1}
+      },
+      "allOf": [{
+        "if": {"properties": {"kind": {"const": "original_maps_export"}}},
+        "then": {"properties": {"source_row": {"type": "integer"}, "import_key": {"type": "string"}}},
+        "else": {"properties": {
+          "source_row": {"type": "null"}, "import_key": {"type": "null"},
+          "reference": {"type": "string", "pattern": "^https://github\\.com/subtlesayak/Mutta-Puffs-Database/(issues|pull)/[1-9][0-9]*$"}
+        }}
+      }]
+    },
+    "map_links": {
+      "type": "object", "additionalProperties": false,
+      "properties": {
+        "google_maps": {"type": "string", "pattern": "^https://(www\\.google\\.com/maps/|maps\\.app\\.goo\\.gl/)"},
+        "apple_maps": {"type": "string", "pattern": "^https://maps\\.apple\\.com/"},
+        "openstreetmap": {"type": "string", "pattern": "^https://www\\.openstreetmap\\.org/"}
+      }
+    },
+    "note": {"type": ["string", "null"], "maxLength": 3000},
+    "photos": {
+      "type": "array",
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["url", "alt", "credit", "license", "source"],
+        "properties": {
+          "url": {"type": "string", "pattern": "^https://"},
+          "alt": {"type": "string", "minLength": 1, "maxLength": 250},
+          "credit": {"type": "string", "minLength": 1, "maxLength": 120},
+          "license": {"enum": ["CC BY 4.0", "CC BY-SA 4.0", "CC0 1.0"]},
+          "source": {"type": "string", "pattern": "^https://"}
+        }
+      }
+    }
+  }
+}

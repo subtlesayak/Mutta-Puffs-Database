@@ -1,0 +1,22 @@
+name: Correct a listing
+description: Fix a pin, name, locality or shop status
+title: "Correct a listing: "
+body:
+  - type: input
+    id: place_id
+    attributes: {label: Atlas place ID}
+    validations: {required: true}
+  - type: textarea
+    id: correction
+    attributes: {label: What should change?, description: "For a corrected pin, describe how and when you checked the shop location."}
+    validations: {required: true}
+  - type: input
+    id: evidence
+    attributes: {label: Corrected public pin or reference}
+  - type: checkboxes
+    id: consent
+    attributes:
+      label: Publication
+      options:
+        - label: I can share my original contribution under CC BY 4.0.
+          required: true
