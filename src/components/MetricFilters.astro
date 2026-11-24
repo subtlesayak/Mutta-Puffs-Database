@@ -1,9 +1,12 @@
 ---
 import {atlas} from '../lib/catalogue';
+interface Props {collapsible?: boolean}
+const {collapsible = true} = Astro.props;
+const Wrapper = collapsible ? 'details' : 'fieldset';
 const currencies = [...new Set(Object.values(atlas.place_metrics).flatMap(metric => metric.price ? [metric.price.currency] : []))].sort();
 ---
-<details class="metric-filters">
-  <summary>Price and Puff Score</summary>
+<Wrapper class="metric-filters">
+  {collapsible ? <summary>Price and Puff Score</summary> : <legend>Price and Puff Score</legend>}
   <div class="fields">
     <label class="field">Reported price
       <select name="price_status"><option value="">Any price status</option><option value="reported">Has a dated price</option></select>
@@ -15,4 +18,4 @@ const currencies = [...new Set(Object.values(atlas.place_metrics).flatMap(metric
     <label class="field">Puff Score <select name="min_score"><option value="">Any score status</option><option value="1">Has an approved score</option>{[60,70,80,90].map(score => <option value={score}>{score}+ out of 100</option>)}</select></label>
   </div>
   <p class="muted">Filters use the latest approved price and the weighted average of approved reviews.</p>
-</details>
+</Wrapper>

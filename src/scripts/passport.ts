@@ -51,7 +51,7 @@ export function startPassport() {
       const button = removeButton('Remove from saved', () => {
         if (mutate(book => {book.saved = book.saved.filter(place => place !== id);},'Removed from saved places.')) save.focus();
       });
-      button.setAttribute('aria-label','Remove ' + (labels.get(id) ?? 'place') + ' from saved');
+      button.setAttribute('aria-label','Remove from saved: ' + (labels.get(id) ?? 'place'));
       li.append(listing(id),document.createElement('br'),button);
       return li;
     }));

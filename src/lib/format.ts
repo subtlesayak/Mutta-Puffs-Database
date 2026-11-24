@@ -19,6 +19,8 @@ export const verificationLabels: Record<Verification, string> = {
 export const providerLabels: Record<Provider, string> = {
   google_maps: 'Google Maps', apple_maps: 'Apple Maps', openstreetmap: 'OpenStreetMap',
 };
+export const openInMap = (provider: Provider) => 'Open in ' + providerLabels[provider];
+export const openInMapName = (provider: Provider, place: string) => openInMap(provider) + ' · ' + place + ' (opens in a new tab)';
 export function locality(location: Location) {
   return [...new Set([location.locality, location.city, location.district, location.state, location.country].filter(Boolean))].join(', ');
 }

@@ -1,5 +1,5 @@
 import Fuse from 'fuse.js';
-import {accuracyLabels, formatNumber, formatPrice, locality, path, placeCount, placePath, providerLabels} from '../lib/format';
+import {accuracyLabels, formatNumber, formatPrice, locality, openInMap, openInMapName, path, placeCount, placePath, providerLabels} from '../lib/format';
 import {browserPosition, distanceKm} from '../lib/distance';
 import {metricMatcher} from '../lib/metric-filters';
 import {track} from './analytics';
@@ -33,12 +33,12 @@ function card(place: Place, provider: Provider, distance: number | null, metric?
   li.append(tags);
   const destination = place.map_links[provider];
   if (destination) {
-    const link = make('a', 'Open in ' + providerLabels[provider], 'text-link');
+    const link = make('a', openInMap(provider), 'text-link');
     link.href = destination;
     link.target = '_blank';
     link.rel = 'noopener noreferrer';
     link.dataset.directions = provider;
-    link.setAttribute('aria-label', place.name + ' in ' + providerLabels[provider] + ' (opens in a new tab)');
+    link.setAttribute('aria-label', openInMapName(provider,place.name));
     li.append(link);
   } else {
     li.append(make('p', 'Map link unavailable', 'muted'));
@@ -124,8 +124,11 @@ export async function startExplorer() {
     if (origin) distances.sort((a,b) => (a.distance ?? 0) - (b.distance ?? 0) || a.place.id.localeCompare(b.place.id));
     const pages = Math.max(1, Math.ceil(distances.length / PAGE_SIZE));
     page = Math.min(pages - 1,page);
+    const recovery = origin && Number.isFinite(limit)
+      ? 'Try a wider distance, change your search, or clear the filters.'
+      : 'Try a different search or clear the filters.';
     status.textContent = !distances.length
-      ? 'No places match. Try a wider distance or clear the filters.'
+      ? 'No places match. ' + recovery
       : placeCount(distances.length) + (origin ? (Number.isFinite(limit) ? ' within ' + formatNumber(limit) + ' km of ' : ' sorted by distance from ') + origin.label : '');
     clearTimeout(noResultsTimer);
     if (!distances.length && query) noResultsTimer = setTimeout(() => track({name:'no_results'}),900);

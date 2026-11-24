@@ -77,6 +77,7 @@ const scores = [['pastry','Pastry and flakiness'],['filling','Masala and filling
           <button class="button" type="submit">Continue on GitHub <Icon name="external" size={18} /></button>
           <button class="button secondary" type="button" data-save-draft>Save draft on this device</button>
           <button class="button secondary" type="button" data-clear-draft hidden>Remove saved draft</button>
+          <button class="button secondary" type="button" data-undo-draft hidden>Undo draft removal</button>
         </div>
       </form>
       <aside class="panel">
@@ -127,8 +128,11 @@ const scores = [['pastry','Pastry and flakiness'],['filling','Masala and filling
   const capture = form.querySelector<HTMLElement>('[data-capture]')!;
   const locate = form.querySelector<HTMLButtonElement>('[data-capture-location]')!;
   const paste = form.querySelector<HTMLTextAreaElement>('[data-share-paste]')!;
+  const saveButton = form.querySelector<HTMLButtonElement>('[data-save-draft]')!;
   const savedButton = form.querySelector<HTMLButtonElement>('[data-clear-draft]')!;
+  const undoButton = form.querySelector<HTMLButtonElement>('[data-undo-draft]')!;
   const draftKey = 'mpdb-private-contribution-draft';
+  let removedDraft: string | null = null;
   const field = (name: string) => form.elements.namedItem(name) as HTMLInputElement | HTMLTextAreaElement | null;
   let sharedLink = '';
   let locationRequest = 0;
@@ -191,9 +195,11 @@ const scores = [['pastry','Pastry and flakiness'],['filling','Masala and filling
       if (request === locationRequest) locate.disabled = false;
     }
   });
-  form.querySelector('[data-save-draft]')?.addEventListener('click',() => {
+  saveButton.addEventListener('click',() => {
     try {
       localStorage.setItem(draftKey,JSON.stringify({kind:kind.value,fields:Object.fromEntries(new FormData(form))}));
+      removedDraft = null;
+      undoButton.hidden = true;
       savedButton.hidden = false;
       notice.textContent = 'Draft saved on this device.';
     } catch {
@@ -202,11 +208,32 @@ const scores = [['pastry','Pastry and flakiness'],['filling','Masala and filling
   });
   savedButton.addEventListener('click',() => {
     try {
+      const draft = localStorage.getItem(draftKey);
       localStorage.removeItem(draftKey);
+      removedDraft = draft;
       savedButton.hidden = true;
-      notice.textContent = 'Saved draft removed from this device.';
+      undoButton.hidden = draft === null;
+      notice.textContent = draft === null ? 'There is no saved draft on this device.' : 'Saved draft removed. You can undo this before leaving the page.';
+      (draft === null ? saveButton : undoButton).focus();
     } catch {
       notice.textContent = 'This browser could not remove the saved draft.';
+    }
+  });
+  undoButton.addEventListener('click',() => {
+    if (removedDraft === null) return;
+    try {
+      if (localStorage.getItem(draftKey) !== null) {
+        notice.textContent = 'Another draft is already saved. The saved copy was kept.';
+        return;
+      }
+      localStorage.setItem(draftKey,removedDraft);
+      removedDraft = null;
+      undoButton.hidden = true;
+      savedButton.hidden = false;
+      notice.textContent = 'Saved draft restored.';
+      savedButton.focus();
+    } catch {
+      notice.textContent = 'This browser could not restore the draft. Try undoing the removal again.';
     }
   });
   form.addEventListener('input',() => { alert.textContent = ''; });

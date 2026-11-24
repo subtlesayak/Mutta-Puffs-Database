@@ -15,6 +15,7 @@ export async function startMap() {
   const frame = root.querySelector<HTMLElement>('[data-map-frame]')!;
   const list = root.querySelector<HTMLUListElement>('[data-map-list]')!;
   const form = root.querySelector<HTMLFormElement>('form')!;
+  const filterCount = root.querySelector<HTMLElement>('[data-map-filter-count]')!;
   const status = root.querySelector<HTMLElement>('[data-map-status]')!;
   const selection = root.querySelector<HTMLElement>('[data-selection]')!;
   const city = root.querySelector<HTMLSelectElement>('[name=city]')!;
@@ -122,6 +123,10 @@ export async function startMap() {
     const route = trails.find(item => item.id === trail.value);
     const stops = route ? new Set(route.place_ids) : null;
     const matchesMetric = metricMatcher(form);
+    const active = [...form.querySelectorAll<HTMLSelectElement | HTMLInputElement>(
+      '[name=region],[name=district],[name=trail],[name=accuracy],[name=verification],[name=price_status],[name=currency],[name=max_price],[name=min_score]',
+    )].filter(control => !control.disabled && control.value).length;
+    filterCount.textContent = active ? ' · ' + active + ' active' : '';
     const points = pins.features.filter(({properties: pin}) =>
       (!allowed || allowed.has(pin.id)) && (!stops || stops.has(pin.id)) &&
       (!region.value || [pin.state,pin.country].includes(region.value)) &&

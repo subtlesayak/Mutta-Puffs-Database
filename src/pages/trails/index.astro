@@ -12,7 +12,7 @@ import {path} from '../../lib/format';
         <p class="kicker">{byId.get(trail.place_ids[0])?.location.city} · {trail.place_ids.length} stops</p>
         <h2>{trail.name}</h2>
         <p>{trail.description}</p>
-        <a class="text-link" href={path('trails/' + trail.id + '/')} aria-label={'See stops for ' + trail.name}>See the stops <Icon name="arrow" size={16} /></a>
+        <a class="text-link" href={path('trails/' + trail.id + '/')} aria-label={'See the stops for ' + trail.name}>See the stops <Icon name="arrow" size={16} /></a>
       </li>)}
     </ul>
   </div>
