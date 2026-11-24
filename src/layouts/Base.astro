@@ -60,6 +60,15 @@ const activeSection = section ?? (guideDestinations.some(({route}) => canonical.
 <script>
   import {startAnalytics} from '../scripts/analytics';
   import {enableApp} from '../scripts/pwa';
+
+  const masthead = document.querySelector<HTMLElement>('.masthead')!;
+  function updateScrollPadding() {
+    const height = Math.ceil(masthead.getBoundingClientRect().height);
+    document.documentElement.style.setProperty('--masthead-height', height + 'px');
+  }
+  updateScrollPadding();
+  if ('ResizeObserver' in window) new ResizeObserver(updateScrollPadding).observe(masthead);
+
   enableApp();
   startAnalytics();
 </script>
