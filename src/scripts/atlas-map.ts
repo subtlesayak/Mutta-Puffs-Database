@@ -9,6 +9,21 @@ import type {openGoogleMap} from './google-map';
 interface Pin {id: string; name: string; accuracy: Accuracy; status: string; city: string | null; state: string | null; country: string | null; district: string | null}
 type Pins = FeatureCollection<Point,Pin>;
 
+async function loadBasemap(): Promise<FeatureCollection | string> {
+  try {
+    const [response,{decode},{PbfReader}] = await Promise.all([
+      fetch(path('basemap.pbf')),import('geobuf'),import('pbf'),
+    ]);
+    if (response.ok) {
+      const outline = decode(new PbfReader(await response.arrayBuffer()));
+      if (outline.type === 'FeatureCollection' && outline.features.length) return outline;
+    }
+  } catch {
+    // A previous release or interrupted cache may only have the GeoJSON outline.
+  }
+  return path('basemap.geojson');
+}
+
 export async function startMap() {
   const root = document.querySelector<HTMLElement>('[data-atlas-map]');
   if (!root) return;
@@ -276,16 +291,17 @@ export async function startMap() {
   async function initializeMap() {
     initializing = true;
     try {
-      const [library, worker] = await Promise.all([
+      const [library, worker, outline] = await Promise.all([
         import('maplibre-gl'),
         import('maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url'),
+        loadBasemap(),
       ]);
       maplibregl = library;
       library.setWorkerUrl(worker.default);
       map = new library.Map({
         container: canvas, attributionControl: false, center: [75.8,11], zoom: 4.5, minZoom: 1, maxZoom: 19,
         style: {version: 8, sources: {
-          land: {type: 'geojson', data: path('basemap.geojson'), attribution: 'Natural Earth'},
+          land: {type: 'geojson', data: outline, attribution: 'Natural Earth'},
           streets: {
             type: 'raster', tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'], tileSize: 256, maxzoom: 19,
             attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',

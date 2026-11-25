@@ -8,6 +8,7 @@ public/api/
 public/analysis/
 public/schemas/
 public/basemap.geojson
+public/basemap.pbf
 public/visuals/
 .DS_Store
 .env
