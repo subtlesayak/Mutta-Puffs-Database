@@ -4,9 +4,9 @@ import {resolve, posix} from 'node:path';
 
 const dist = resolve('dist');
 const base = '/Mutta-Puffs-Database/';
-const offlinePages = ['./','contribute/','share/','offline/','guide/','passport/','wrapped/','roulette/'];
+const offlinePages = ['./','contribute/','share/','offline/','guide/','map/','pit-stops/','passport/','wrapped/','roulette/'];
 const pageFiles = new Map(offlinePages.map(route => [route, route === './' ? 'index.html' : route + 'index.html']));
-const paths = new Set([...pageFiles.keys(),'manifest.webmanifest','icons/puff-192.png','icons/puff-512.png','icons/puff-maskable.png','puff.svg','api/v1/places.json','api/v1/place-metrics.json','images/egg-puff.webp']);
+const paths = new Set([...pageFiles.keys(),'manifest.webmanifest','icons/puff-192.png','icons/puff-512.png','icons/puff-maskable.png','puff.svg','api/v1/places.json','api/v1/place-metrics.json','api/v1/places.geojson','api/v1/cities.json','api/v1/trails.json','basemap.geojson','images/egg-puff.webp']);
 for (const file of pageFiles.values()) {
   const html = await readFile(resolve(dist,file),'utf8');
   for (const match of html.matchAll(/(?:src|href)="([^"]+)"/g)) {
@@ -16,8 +16,10 @@ for (const file of pageFiles.values()) {
 for (const asset of paths) {
   if (!asset.startsWith('_astro/') || !/\.(?:js|css)$/.test(asset)) continue;
   const source = await readFile(resolve(dist,asset),'utf8');
-  for (const match of source.matchAll(/["'](\.\/[^"']+\.(?:js|woff2?|css))["']/g)) {
-    paths.add(posix.join(posix.dirname(asset),match[1]));
+  for (const match of source.matchAll(/["'`]([./][\w./-]+\.(?:m?js|woff2?|css))["'`]/g)) {
+    const target = match[1];
+    if (target.startsWith('./')) paths.add(posix.join(posix.dirname(asset),target));
+    else if (target.startsWith(base + '_astro/')) paths.add(target.slice(base.length));
   }
   for (const match of source.matchAll(/url\(["']?(\/[^\s"')]+)["']?\)/g)) {
     if (match[1].startsWith(base + '_astro/')) paths.add(match[1].slice(base.length));

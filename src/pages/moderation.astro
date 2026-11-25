@@ -1,0 +1,148 @@
+---
+import Base from '../layouts/Base.astro';
+import {communityConfigured} from '../lib/community';
+---
+<Base title="Moderate contributions" description="Review submissions before they enter the public Mutta Puffs database." noindex>
+  <div class="shell">
+    <header class="page-head">
+      <h1>Moderate contributions</h1>
+      <p>Check the evidence and contributor permission before adding a record to the public database.</p>
+    </header>
+    {communityConfigured ? (
+      <div data-moderation>
+        <form class="panel moderation-filter">
+          <label class="field">Moderation key <input name="key" type="password" required autocomplete="off" /></label>
+          <label class="field">Queue <select name="status"><option value="pending">Pending</option><option value="approved">Approved</option><option value="published">Published</option><option value="rejected">Declined</option></select></label>
+          <button class="button" type="submit">Load submissions</button>
+        </form>
+        <p class="live-note" data-moderation-status role="status"></p>
+        <div class="moderation-queue" data-moderation-items></div>
+      </div>
+    ) : <p class="panel">The community submission service is unavailable on this site.</p>}
+  </div>
+</Base>
+<style>
+  .moderation-filter { display:grid; grid-template-columns: minmax(0,1fr) minmax(0,.55fr) auto; gap:.9rem; align-items:end; }
+  .moderation-queue { display:grid; gap:1rem; margin-block:1rem; }
+  .moderation-queue :global(article) { display:grid; gap:.75rem; }
+  .moderation-queue :global(dl) { margin:0; }
+  .moderation-queue :global(dt) { font-weight:750; }
+  .moderation-queue :global(dd) { margin:0 0 .55rem; overflow-wrap:anywhere; white-space:pre-wrap; }
+  @media (max-width:43rem) { .moderation-filter { grid-template-columns: minmax(0,1fr); } }
+</style>
+<script>
+  import {communityRequest, type ModeratedSubmission} from '../lib/community';
+  import {github} from '../lib/format';
+  import {githubDraft} from '../lib/github-draft';
+
+  const root = document.querySelector<HTMLElement>('[data-moderation]');
+  if (root) {
+    const form = root.querySelector<HTMLFormElement>('form')!;
+    const queue = root.querySelector<HTMLElement>('[data-moderation-items]')!;
+    const status = root.querySelector<HTMLElement>('[data-moderation-status]')!;
+    const key = form.elements.namedItem('key') as HTMLInputElement;
+    const filter = form.elements.namedItem('status') as HTMLSelectElement;
+    let requestNumber = 0;
+    const choices: Partial<Record<ModeratedSubmission['status'], [ModeratedSubmission['status'],string][]>> = {
+      pending:[['approved','Approve for publication'],['rejected','Decline']],
+      approved:[['published','Mark published'],['pending','Return to queue']],
+      rejected:[['pending','Return to queue']],
+    };
+
+    function node<K extends keyof HTMLElementTagNameMap>(tag: K, text = '', className = '') {
+      const element = document.createElement(tag);
+      element.textContent = text;
+      if (className) element.className = className;
+      return element;
+    }
+    function field(label: string, placeholder: string) {
+      const wrapper = node('label',label,'field');
+      const input = node('input');
+      input.placeholder = placeholder;
+      wrapper.append(input);
+      return {wrapper,input};
+    }
+    function render(item: ModeratedSubmission) {
+      const article = node('article','','panel');
+      article.append(node('h2',item.submission.kind.replace(/^./,character=>character.toUpperCase())),
+        node('p',item.created_at.slice(0,10) + ' · ' + item.status + ' · ' + item.submission.license,'muted'));
+      const details = node('dl');
+      for (const [label,value] of Object.entries(item.submission.fields)) {
+        details.append(node('dt',label.replaceAll('_',' ')),node('dd',value));
+      }
+      article.append(details);
+      if (item.reason) article.append(node('p',item.reason));
+      const actions = node('div','','actions');
+      if (item.status === 'approved') {
+        const {kind,fields} = item.submission;
+        const data = new FormData();
+        for (const [name,value] of Object.entries(fields)) data.set(name,value);
+        const title = fields.place_name || fields.story_title || fields.place_id || kind;
+        const issue = githubDraft(github,kind,'Approved atlas contribution: ' + title,data);
+        const link = node('a','Open GitHub record','text-link');
+        link.href = issue.href;
+        link.target = '_blank';
+        link.rel = 'noopener noreferrer';
+        actions.append(link);
+        const copy = node('details');
+        const label = node('label','Issue body','field');
+        const body = node('textarea');
+        body.value = issue.body;
+        body.readOnly = true;
+        body.rows = 6;
+        label.append(body);
+        copy.append(node('summary',issue.prefilled ? 'View issue body' : 'Copy the full issue body before opening GitHub'),label);
+        article.append(copy);
+      }
+      if (choices[item.status]) {
+        const note = field('Moderation note','Shown to the contributor');
+        note.input.maxLength = 500;
+        article.append(note.wrapper);
+        const reference = item.status === 'approved' ? field('Published issue or PR','https://github.com/…') : null;
+        if (reference) {reference.input.type = 'url'; article.append(reference.wrapper);}
+        for (const [decision,label] of choices[item.status]!) {
+          const button = node('button',label,'button secondary small');
+          button.type = 'button';
+          button.addEventListener('click', async () => {
+            for (const control of actions.querySelectorAll('button')) control.disabled = true;
+            try {
+              await communityRequest('v1/moderation/submissions/' + item.id, {
+                token:key.value,method:'PATCH',body:{status:decision,reason:note.input.value,reference:reference?.input.value},
+              });
+              await load();
+              filter.focus();
+            } catch (error) {
+              status.textContent = error instanceof Error ? error.message : 'Could not save the decision.';
+              for (const control of actions.querySelectorAll('button')) control.disabled = false;
+            }
+          });
+          actions.append(button);
+        }
+      }
+      if (item.reference && /^https:\/\/github\.com\/subtlesayak\/Mutta-Puffs-Database\/(issues|pull)\/\d+$/.test(item.reference)) {
+        const original = node('a','Published record','text-link');
+        original.href = item.reference;
+        actions.append(original);
+      }
+      article.append(actions);
+      return article;
+    }
+    async function load() {
+      const request = ++requestNumber;
+      queue.replaceChildren();
+      status.textContent = 'Loading submissions…';
+      try {
+        const {submissions} = await communityRequest<{submissions:ModeratedSubmission[]}>(
+          'v1/moderation/submissions?status=' + filter.value,{token:key.value},
+        );
+        if (request !== requestNumber) return;
+        queue.replaceChildren(...submissions.map(render));
+        status.textContent = submissions.length ? 'Loaded ' + submissions.length + ' submissions.' : 'There are no submissions in this queue.';
+      } catch (error) {
+        if (request === requestNumber) status.textContent = error instanceof Error ? error.message : 'Could not load submissions.';
+      }
+    }
+    form.addEventListener('submit',event=>{event.preventDefault();void load();});
+    filter.addEventListener('change',()=>{if (key.value) void load();});
+  }
+</script>

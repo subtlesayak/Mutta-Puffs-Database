@@ -63,6 +63,7 @@ export interface PriceMonth {month: string; median: number; shop_count: number; 
 export interface Atlas {
   schema_version: 1;
   places: Place[];
+  place_aliases: Record<string, string>;
   cities: City[];
   reviews: Review[];
   observations: Observation[];

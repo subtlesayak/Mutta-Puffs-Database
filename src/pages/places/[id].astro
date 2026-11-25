@@ -1,15 +1,21 @@
 ---
 import Base from '../../layouts/Base.astro';
 import Icon from '../../components/Icon.astro';
-import {atlas} from '../../lib/catalogue';
-import {accuracyLabels, cityPath, formatDate, formatNumber, formatPrice, locality, path, providerLabels, verificationLabels} from '../../lib/format';
+import {atlas, byId} from '../../lib/catalogue';
+import {accuracyLabels, cityPath, formatDate, formatNumber, formatPrice, locality, path, placePath, providerLabels, verificationLabels} from '../../lib/format';
 import type {Place, Provider} from '../../lib/types';
 
 export function getStaticPaths() {
-  return atlas.places.map(place => ({params: {id: place.id}, props: {place}}));
+  return [
+    ...atlas.places.map(place => ({params: {id: place.id}, props: {place}})),
+    ...Object.entries(atlas.place_aliases).map(([id, canonical]) => ({
+      params: {id}, props: {place: byId.get(canonical)!, redirectTo: canonical},
+    })),
+  ];
 }
-interface Props {place: Place}
-const {place} = Astro.props;
+interface Props {place: Place; redirectTo?: string}
+const {place, redirectTo} = Astro.props;
+if (redirectTo) return Astro.redirect(placePath(redirectTo), 301);
 const area = locality(place.location);
 const city = atlas.cities.find(item => item.name === place.location.city);
 const links = Object.entries(place.map_links) as [Provider, string][];

@@ -303,7 +303,7 @@ Select a place to open its original Google Maps link, or choose Apple Maps or Op
 
 ## Telangana (3)
 
-### Hydrabad (2)
+### Hyderabad (2)
 
 | Place | Alternate maps |
 | --- | --- |

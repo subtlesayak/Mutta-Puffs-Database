@@ -19,6 +19,7 @@ from geography import BOUNDARIES, Boundaries, CITY_CENTRES, distance_km, map_ref
 
 ROOT = Path(__file__).resolve().parents[1]
 VERSION = 1
+IDENTITIES = ROOT / "data" / "place-identities.json"
 KINDS = {"places": "place", "reviews": "review", "observations": "observation", "trails": "trail"}
 ACCURACY = {"Estimated from link": "estimated", "Explicit pin": "source_pin"}
 
@@ -27,7 +28,15 @@ def read_json(path):
     def invalid_constant(value):
         raise ValueError(f"Invalid JSON number {value} in {path}")
 
-    return json.loads(path.read_text(encoding="utf-8"), parse_constant=invalid_constant)
+    def unique_object(pairs):
+        record = {}
+        for key, value in pairs:
+            if key in record:
+                raise ValueError(f"Duplicate key {key!r} in {path}")
+            record[key] = value
+        return record
+
+    return json.loads(path.read_text(encoding="utf-8"), parse_constant=invalid_constant, object_pairs_hook=unique_object)
 
 
 def token(text):
@@ -110,13 +119,29 @@ def validate_places(places):
         require(all(map(valid_https, urls)), f"Malformed HTTPS link for {place['id']}")
 
 
-def merge_places(imports, approved):
+def import_key_matches(source, keys):
+    key = source["import_key"]
+    if source["kind"] != "original_maps_export" or key not in keys:
+        return False
+    if key.startswith("tag:"):
+        return source["reference"] is None
+    if not source["reference"]:
+        return False
+    return map_reference(source["reference"])[1] == key
+
+
+def merge_places(imports, approved, import_keys=None):
     merged = {place["id"]: place for place in validated(imports, "place")}
     for place in validated(approved, "place"):
         original = merged.get(place["id"])
         if original:
-            require(place["source"] == original["source"], f"Correction must preserve import provenance for {place['id']}")
+            keys = {original["source"]["import_key"]}
+            if import_keys:
+                keys.update(import_keys.get(place["id"], ()))
+            require(import_key_matches(place["source"], keys), f"Correction must preserve import provenance for {place['id']}")
             require(place["verification"]["reference"] is not None, f"Correction needs a repository issue or PR for {place['id']}")
+            # Row numbers and original URLs are pointers into the current export.
+            place = {**place, "source": original["source"]}
         else:
             require(place["source"]["kind"] == "community", f"New place must have a community source: {place['id']}")
         merged[place["id"]] = place
@@ -125,6 +150,43 @@ def merge_places(imports, approved):
     check_duplicate_targets(places)
     return places
 
+
+def validated_identities(identities):
+    validator = Draft202012Validator(read_json(ROOT / "schemas" / "place-identities.schema.json"))
+    error = next(validator.iter_errors(identities), None)
+    require(error is None, f"Invalid place identities: {error.message if error else ''}")
+    aliases = {}
+    merges = identities["merges"]
+    for retired in merges:
+        current = retired
+        seen = set()
+        while current in merges:
+            require(current not in seen, f"Circular place merge at {current}")
+            seen.add(current)
+            current = merges[current]["place_id"]
+        aliases[retired] = current
+    return identities["import_ids"], aliases
+
+
+def resolve_imports(records, import_ids, aliases):
+    imports = {}
+    primary = set()
+    keys = defaultdict(set)
+    for key, identifier in import_ids.items():
+        keys[aliases.get(identifier, identifier)].add(key)
+    for row in records:
+        place = imported_place(row)
+        key = place["source"]["import_key"]
+        identifier = import_ids.get(key, place["id"])
+        target = aliases.get(identifier, identifier)
+        keys[target].add(key)
+        # Prefer the surviving listing's row if both listings still appear in the export.
+        canonical_row = identifier == target and place["id"] == target
+        if target not in imports or (canonical_row and target not in primary):
+            imports[target] = {**place, "id": target}
+            if canonical_row:
+                primary.add(target)
+    return list(imports.values()), keys
 
 def check_duplicate_targets(places):
     targets = {}
@@ -187,12 +249,27 @@ def city_directory(places):
     return sorted(cities, key=lambda city: (-city["count"], city["name"]))
 
 
-def catalogue(raw_rows=None, approved=None):
+def catalogue(raw_rows=None, approved=None, identities=None):
+    if identities is None:
+        identities = read_json(IDENTITIES) if raw_rows is None else {"schema_version": VERSION, "import_ids": {}, "merges": {}}
+    import_ids, aliases = validated_identities(identities)
     analysis = analyse(read_rows() if raw_rows is None else raw_rows, Boundaries())
     if approved is None:
         approved = {group: read_json(ROOT / "data" / "approved" / f"{group}.json") for group in KINDS}
-    places = merge_places([imported_place(row) for row in analysis["records"]], approved["places"])
+    imports, keys = resolve_imports(analysis["records"], import_ids, aliases)
+    corrections = validated(approved["places"], "place")
+    for place in corrections:
+        require(place["id"] not in aliases, f"Review and remove the approved record for merged place {place['id']}")
+    places = merge_places(imports, corrections, keys)
+    active = {place["id"] for place in places}
+    for registered in sorted(set(import_ids.values()) | set(aliases)):
+        require(aliases.get(registered, registered) in active,
+                f"Place {registered} is missing. Register its current import key or a reviewed merge.")
     reviews, observations, trails = (validated(approved[key], KINDS[key]) for key in ("reviews", "observations", "trails"))
+    reviews = [{**review, "place_id": aliases.get(review["place_id"], review["place_id"])} for review in reviews]
+    observations = [{**record, "place_id": aliases.get(record["place_id"], record["place_id"])} for record in observations]
+    trails = [{**trail, "place_ids": list(dict.fromkeys(aliases.get(place_id, place_id) for place_id in trail["place_ids"]))} for trail in trails]
+    validated(trails, "trail")
     check_references(places, reviews, observations, trails)
     cities = city_directory(places)
     stats = {
@@ -207,7 +284,7 @@ def catalogue(raw_rows=None, approved=None):
         "notes": sum(bool(p["note"]) for p in places),
         "archive": analysis["summary"], "duplicate_candidates": duplicate_candidates(places),
     }
-    return {"schema_version": VERSION, "places": places, "reviews": reviews, "observations": observations,
+    return {"schema_version": VERSION, "places": places, "place_aliases": aliases, "reviews": reviews, "observations": observations,
             "trails": trails, "cities": cities, "stats": stats, **summarize(reviews, observations, cities)}
 
 

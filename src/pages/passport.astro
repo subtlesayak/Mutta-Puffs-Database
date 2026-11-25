@@ -3,11 +3,12 @@ import Base from '../layouts/Base.astro';
 import Icon from '../components/Icon.astro';
 import {atlas} from '../lib/catalogue';
 import {path} from '../lib/format';
+import {communityConfigured} from '../lib/community';
 const places = [...atlas.places].sort((a,b) => a.name.localeCompare(b.name));
 ---
 <Base title="Puff Passport" description="Save puff spots, log your visits, and collect a private stamp for every bakery you visit.">
   <div class="shell" data-passport>
-    <header class="page-head"><p class="kicker">Your bakery diary</p><h1>Puff Passport</h1><p>Save a spot for later and collect a stamp when you visit. This diary stays in this browser.</p>
+    <header class="page-head"><p class="kicker">Your bakery diary</p><h1>Puff Passport</h1><p>Save a spot for later and collect a stamp when you visit. Your diary is private to this browser by default.</p>
       <div class="actions"><a class="text-link" href={path('wrapped/')}>See your Puff Wrapped <Icon name="arrow" size={17} /></a></div>
     </header>
     <p class="live-note" data-passport-status role="status"></p>
@@ -34,6 +35,55 @@ const places = [...atlas.places].sort((a,b) => a.name.localeCompare(b.name));
         <h2 id="saved-title">Saved for later</h2><p data-saved-empty class="muted">Save a bakery to start a list for your next outing.</p>
         <ul class="plain-list" data-saved></ul>
       </section>
+      <section class="panel backup" aria-labelledby="collections-title">
+        <h2 id="collections-title">Puff collections</h2>
+        <p>Choose a puff spot in the visit form, then add it to a collection.</p>
+        <form class="sync-form" data-collection-form>
+          <label class="field">Collection <select name="collection"><option value="">Create a collection</option></select></label>
+          <label class="field" data-collection-name>Collection name <input name="name" maxlength="80" required /></label>
+          <button class="button secondary" type="submit">Add selected place</button>
+        </form>
+        <ul class="plain-list" data-passport-collections></ul>
+        <button class="button secondary small" type="button" data-undo-collection hidden>Undo collection removal</button>
+        <label class="field" data-copy-selection hidden>Text to copy <textarea rows="5" readonly></textarea></label>
+        <p class="live-note" role="status" data-collection-status></p>
+      </section>
+      <section class="panel backup" aria-labelledby="achievements-title">
+        <h2 id="achievements-title">Passport achievements</h2>
+        <p data-achievements-empty>Log a visit to earn your first achievement.</p>
+        <ul class="plain-list" data-achievements></ul>
+      </section>
+      <section class="panel backup" aria-labelledby="backup-title">
+        <h2 id="backup-title">Back up your passport</h2>
+        <p>Save a copy before switching devices or clearing browser storage. The file includes your private notes.</p>
+        <div class="actions">
+          <button type="button" class="button secondary" data-export-passport>Download backup</button>
+        </div>
+        <form data-import-passport>
+          <label class="field">Passport backup <input type="file" accept=".json,application/json" name="backup" required /></label>
+          <p class="muted">Import adds saved places and visits to this passport.</p>
+          <button type="submit" class="button secondary">Import backup</button>
+        </form>
+        <p class="live-note" role="status" data-backup-status></p>
+      </section>
+      {communityConfigured && <section class="panel backup" aria-labelledby="sync-title">
+        <h2 id="sync-title">Sync an encrypted copy</h2>
+        <p>Use the same private key on both devices. Sync adds new visits and saved places. Removing an item from one device does not remove it from the backup.</p>
+        <form class="sync-form" data-passport-sync>
+          <label class="field">Private sync key <input name="key" type="password" maxlength="43" required autocomplete="off" autocapitalize="none" /></label>
+          <div class="actions">
+            <button class="button secondary" type="submit">Sync now</button>
+            <button class="button secondary" type="button" data-new-key>Create a key</button>
+            <button class="button secondary" type="button" data-copy-key hidden>Copy key</button>
+          </div>
+          <p class="live-note" role="status" data-sync-status></p>
+        </form>
+        <details>
+          <summary>Remove the server backup</summary>
+          <p>This deletes the encrypted server copy for the key entered above. The passport on this device stays available.</p>
+          <button class="button secondary" type="button" data-remove-sync-backup>Delete server backup</button>
+        </details>
+      </section>}
       <section class="panel" aria-labelledby="history-title">
         <h2 id="history-title">Visit history</h2><p data-history-empty class="muted">Your first visit starts the diary.</p>
         <button class="button secondary small" type="button" data-undo hidden>Undo removal</button>
@@ -44,6 +94,10 @@ const places = [...atlas.places].sort((a,b) => a.name.localeCompare(b.name));
 </Base>
 <style>
   .passport-grid {align-items:start;}
+  .backup, [data-import-passport] {display:grid;gap:.75rem;justify-items:start;}
+  [data-import-passport], .sync-form {width:100%;}
+  .sync-form {display:grid;gap:.7rem;}
+  [data-import-passport] .field {width:100%;}
   [data-visit-form] {display:grid;gap:.8rem;}
   .stamps {background:var(--butter);}
   .stamp-grid {list-style:none;margin-block-end:0;padding:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,9rem),1fr));gap:.65rem;}

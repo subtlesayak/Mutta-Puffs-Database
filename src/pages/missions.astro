@@ -1,0 +1,65 @@
+---
+import Base from '../layouts/Base.astro';
+import Icon from '../components/Icon.astro';
+import {atlas} from '../lib/catalogue';
+import {locality,path,placePath} from '../lib/format';
+const eligible = atlas.places.filter(place => place.verification.status !== 'verified');
+const areas = [...new Set(eligible.flatMap(place => [place.location.city,place.location.district]).filter((value): value is string => Boolean(value)))].sort();
+---
+<Base title="Verification missions" description="Help check an estimated pin or identify a pastry counter through a first-hand visit.">
+  <div class="shell" data-missions>
+    <header class="page-head">
+      <h1>Verification missions</h1>
+      <p>Find a place you know, check the public stall or bakery on a visit, and share what you confirmed.</p>
+    </header>
+    <div class="panel mission-filters">
+      <label class="field">City or district
+        <select name="area"><option value="">All areas</option>{areas.map(area => <option>{area}</option>)}</select>
+      </label>
+      <label class="field">Mission
+        <select name="mission"><option value="details">Add missing details</option><option value="pin">Check an estimated pin</option></select>
+      </label>
+    </div>
+    <p class="live-note" data-mission-count role="status"></p>
+    <ul class="place-grid" data-mission-list>
+      {eligible.map(place => {
+        const missing = place.verification.status === 'needs_details';
+        const checkPin = place.location.accuracy === 'estimated';
+        return (
+          <li class="place-card" data-mission-card data-city={place.location.city} data-district={place.location.district} data-missing={missing} data-pin={checkPin} hidden={!missing}>
+            <h2><a href={placePath(place.id)}>{place.name}</a></h2>
+            <p class="muted">{locality(place.location) || 'Location to be confirmed'}</p>
+            <p>{missing ? 'Identify the bakery or stall and confirm its public map link.' : 'Check the storefront location and share a public pin from your visit.'}</p>
+            <a class="text-link" href={path('contribute/?kind=correction&place=' + place.id)}>Report what you checked <Icon name="arrow" size={16} /></a>
+          </li>
+        );
+      })}
+    </ul>
+    <noscript><p>Enable JavaScript to filter missions by city, district or task.</p></noscript>
+  </div>
+</Base>
+<style>
+  .mission-filters { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:.8rem; }
+  .place-card h2 { font-size:1.25rem; }
+  @media (max-width:34rem) {.mission-filters {grid-template-columns:minmax(0,1fr);}}
+</style>
+<script>
+  const root = document.querySelector<HTMLElement>('[data-missions]')!;
+  const area = root.querySelector<HTMLSelectElement>('[name=area]')!;
+  const mission = root.querySelector<HTMLSelectElement>('[name=mission]')!;
+  const status = root.querySelector<HTMLElement>('[data-mission-count]')!;
+  const cards = [...root.querySelectorAll<HTMLElement>('[data-mission-card]')];
+  function filter() {
+    let count = 0;
+    for (const card of cards) {
+      const nearby = !area.value || card.dataset.city === area.value || card.dataset.district === area.value;
+      const matches = mission.value === 'details' ? card.dataset.missing === 'true' : card.dataset.pin === 'true';
+      card.hidden = !nearby || !matches;
+      if (!card.hidden) count++;
+    }
+    status.textContent = count ? count + (count === 1 ? ' mission' : ' missions') : 'No missions here yet. Choose another area or type.';
+  }
+  area.addEventListener('change',filter);
+  mission.addEventListener('change',filter);
+  filter();
+</script>

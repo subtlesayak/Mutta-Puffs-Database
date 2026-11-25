@@ -1,21 +1,30 @@
 ---
 import {atlas} from '../lib/catalogue';
+import {path} from '../lib/format';
 interface Props {collapsible?: boolean}
 const {collapsible = true} = Astro.props;
 const Wrapper = collapsible ? 'details' : 'fieldset';
-const currencies = [...new Set(Object.values(atlas.place_metrics).flatMap(metric => metric.price ? [metric.price.currency] : []))].sort();
+const metrics = Object.values(atlas.place_metrics);
+const currencies = [...new Set(metrics.flatMap(metric => metric.price ? [metric.price.currency] : []))].sort();
+const hasScores = metrics.some(metric => metric.score);
 ---
 <Wrapper class="metric-filters">
   {collapsible ? <summary>Price and Puff Score</summary> : <legend>Price and Puff Score</legend>}
-  <div class="fields">
-    <label class="field">Reported price
-      <select name="price_status"><option value="">Any price status</option><option value="reported">Has a dated price</option></select>
-    </label>
+  {(currencies.length > 0 || hasScores) && <div class="fields">
     {currencies.length > 0 && <>
+      <label class="field">Reported price
+        <select name="price_status"><option value="">Any price status</option><option value="reported">Has a dated price</option></select>
+      </label>
       <label class="field">Currency <select name="currency"><option value="">Any currency</option>{currencies.map(currency => <option>{currency}</option>)}</select></label>
       <label class="field">Maximum price <input name="max_price" type="number" inputmode="decimal" min="0" step="any" placeholder="Choose a currency first" disabled /></label>
     </>}
-    <label class="field">Puff Score <select name="min_score"><option value="">Any score status</option><option value="1">Has an approved score</option>{[60,70,80,90].map(score => <option value={score}>{score}+ out of 100</option>)}</select></label>
-  </div>
-  <p class="muted">Filters use the latest approved price and the weighted average of approved reviews.</p>
+    {hasScores && <label class="field">Puff Score <select name="min_score"><option value="">Any score status</option><option value="1">Has an approved score</option>{[60,70,80,90].map(score => <option value={score}>{score}+ out of 100</option>)}</select></label>}
+  </div>}
+  {currencies.length > 0 && hasScores
+    ? <p class="muted">Filters use the latest approved price and the weighted average of approved reviews.</p>
+    : <p class="muted">
+        {currencies.length === 0 && !hasScores ? 'The atlas is waiting for its first approved prices and reviews.' :
+          currencies.length === 0 ? 'The atlas is waiting for its first approved prices.' : 'The atlas is waiting for its first approved reviews.'}
+        {' '}<a href={path('contribute/?kind=' + (currencies.length === 0 ? 'observation' : 'review'))}>Share a first-hand report</a>
+      </p>}
 </Wrapper>

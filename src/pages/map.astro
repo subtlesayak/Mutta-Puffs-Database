@@ -28,7 +28,7 @@ const districts = [...new Set(mapped.flatMap(place => place.location.district ? 
         <details class="map-disclosure">
           <summary>Filters<span data-map-filter-count></span></summary>
           <div class="map-filters">
-            {hasGoogleMap && <label class="field">Base map <select name="renderer"><option value="atlas">Atlas map</option><option value="google">Google Maps</option></select></label>}
+            <label class="field">Base map <select name="renderer"><option value="atlas">Offline atlas</option><option value="street">OpenStreetMap streets</option>{hasGoogleMap && <option value="google">Google Maps</option>}</select></label>
             <label class="field">State or country <select name="region"><option value="">All regions</option>{regions.map(region => <option>{region}</option>)}</select></label>
             <label class="field">Indian district <select name="district"><option value="">All districts</option>{districts.map(district => <option>{district}</option>)}</select></label>
             <label class="field">Puff trail <select name="trail"><option value="">All places</option>{atlas.trails.map(trail => <option value={trail.id}>{trail.name}</option>)}</select></label>
@@ -38,6 +38,7 @@ const districts = [...new Set(mapped.flatMap(place => place.location.district ? 
             <label class="check"><input type="checkbox" name="density" /> Show density</label>
           </div>
           <MetricFilters collapsible={false} />
+          <button type="reset" class="button secondary small map-reset">Clear filters</button>
         </details>
       </form>
       <p data-map-status class="map-status live-note" role="status">Loading the atlas map…</p>
@@ -46,11 +47,12 @@ const districts = [...new Set(mapped.flatMap(place => place.location.district ? 
         {hasGoogleMap && <div class="map-canvas" data-google-canvas aria-label="Google map of saved puff places" hidden></div>}
         <div class="map-legend" data-pins-key><span></span> Saved places <span></span> Cluster</div>
         <div class="map-legend" data-density-key hidden>Density of saved places</div>
+        <a class="map-attribution" data-street-attribution href="https://www.openstreetmap.org/copyright" hidden>© OpenStreetMap contributors</a>
       </div>
       <ul class="place-grid" data-map-list hidden></ul>
       <div class="map-selection" data-selection aria-live="polite"></div>
     </div>
-    <p class="map-note">The basemap uses locally hosted Natural Earth outlines. Open a place in your preferred maps app for street-level directions.</p>
+    <p class="map-note">The offline atlas uses locally hosted Natural Earth outlines. Choose OpenStreetMap streets under Filters for street detail. Street tiles load from OpenStreetMap when you choose that view.</p>
     <div class="actions">
       <a class="text-link" href={path('#nearby')}><Icon name="arrow" size={18} /> Search the place list</a>
       <a class="text-link" href={path('cities/')}>Browse city directories</a>
@@ -68,10 +70,15 @@ const districts = [...new Set(mapped.flatMap(place => place.location.district ? 
   .map-disclosure summary { width: fit-content; min-block-size: 2.75rem; align-content: center; cursor: pointer; font-weight: 800; }
   [data-map-filter-count] { color: var(--muted); font-size: .875rem; font-weight: 650; }
   .map-filters { display: grid; grid-template-columns: repeat(auto-fit,minmax(min(100%,10rem),1fr)); gap: .9rem; align-items: end; }
+  .map-reset { margin-block-start: .75rem; }
   .map-frame { position: relative; background: #e4ebdf; border: 1px solid var(--line); border-radius: 1rem; overflow: hidden; }
   .map-canvas { height: min(70vh,41rem); min-height: 22rem; }
   .map-canvas :global(.maplibregl-canvas:focus-visible) { outline-offset: -5px; }
   .map-legend { display: flex; align-items: center; gap: .38rem; position: absolute; bottom: 1.75rem; left: .7rem; padding: .38rem .6rem; border-radius: .45rem; background: var(--surface); font-size: .78rem; pointer-events: none; }
+  .map-attribution {
+    position:absolute; inset-block-end:.4rem; inset-inline-end:.55rem; padding:.15rem .4rem;
+    border-radius:.3rem; background:var(--surface); font-size:.78rem; font-weight:700;
+  }
   .map-legend span { display: inline-block; inline-size: .58rem; block-size: .58rem; background: var(--rust); border-radius: 50%; }
   .map-legend span:nth-child(2) { inline-size: .88rem; block-size: .88rem; background: var(--pine); margin-inline-start: .34rem; }
   .map-note, .map-index, .map-selection:not(:empty) { margin-block-start: .75rem; }

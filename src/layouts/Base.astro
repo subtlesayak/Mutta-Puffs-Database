@@ -4,18 +4,21 @@ import '@fontsource-variable/fraunces';
 import '@fontsource-variable/fraunces/wght-italic.css';
 import '../styles/atlas.css';
 import Icon from '../components/Icon.astro';
+import {atlas} from '../lib/catalogue';
 import SiteNavigation from '../components/SiteNavigation.astro';
 import {github, path, siteUrl} from '../lib/format';
 import {guideDestinations} from '../lib/navigation';
+import {labelSets, type Locale} from '../lib/locales';
 
-interface Props {title: string; description: string; section?: string; noindex?: boolean}
-const {title, description, section, noindex = false} = Astro.props;
-const fullTitle = section === 'Explore' ? 'Mutta Puffs Everywhere · The egg puff atlas' : title + ' · Mutta Puffs Everywhere';
+interface Props {title: string; description: string; section?: string; noindex?: boolean; locale?: Locale}
+const {title, description, section, noindex = false, locale = 'en'} = Astro.props;
+const labels = labelSets[locale];
+const fullTitle = section === 'Explore' && locale === 'en' ? 'Mutta Puffs Everywhere · The egg puff atlas' : title + ' · Mutta Puffs Everywhere';
 const canonical = new URL(Astro.url.pathname, siteUrl.origin);
 const activeSection = section ?? (guideDestinations.some(({route}) => canonical.pathname.startsWith(path(route))) ? 'Puff Guide' : undefined);
 ---
 <!doctype html>
-<html lang="en">
+<html lang={locale}>
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -33,15 +36,15 @@ const activeSection = section ?? (guideDestinations.some(({route}) => canonical.
     <link rel="apple-touch-icon" href={path('icons/puff-192.png')} />
     <link rel="icon" type="image/svg+xml" href={path('puff.svg')} />
   </head>
-  <body>
-    <a class="skip" href="#main">Skip to content</a>
+  <body data-place-aliases={JSON.stringify(atlas.place_aliases)}>
+    <a class="skip" href="#main">{labels.skip}</a>
     <header class="masthead">
       <div class="shell header-inner">
         <a href={path()} class="wordmark"><span class="brand-icon"><Icon name="puff" size={24} /></span><span>Mutta Puffs<small>Everywhere</small></span></a>
-        <SiteNavigation variant="desktop" pathname={canonical.pathname} activeSection={activeSection} />
+        <SiteNavigation variant="desktop" pathname={canonical.pathname} activeSection={activeSection} locale={locale} />
         <details class="mobile-menu">
-          <summary class="button secondary small"><Icon name="menu" size={19} /> Menu</summary>
-          <SiteNavigation variant="mobile" pathname={canonical.pathname} activeSection={activeSection} />
+          <summary class="button secondary small"><Icon name="menu" size={19} /> {labels.menu}</summary>
+          <SiteNavigation variant="mobile" pathname={canonical.pathname} activeSection={activeSection} locale={locale} />
         </details>
       </div>
     </header>
@@ -50,8 +53,8 @@ const activeSection = section ?? (guideDestinations.some(({route}) => canonical.
       <div class="shell footer-inner">
         <div><a class="footer-brand" href={path()}>Mutta Puffs Everywhere</a><p>A community atlas for one very good snack.</p></div>
         <nav aria-label="Project">
-          <a href={path('about/')}>About</a>
-          <a href={path('about/#data')}>Open data</a>
+          <a href={path('about/')}>{labels.about}</a>
+          <a href={path('about/#data')}>{labels.data}</a>
           <a href={github}>GitHub</a>
         </nav>
       </div>
@@ -59,6 +62,7 @@ const activeSection = section ?? (guideDestinations.some(({route}) => canonical.
   </body>
 </html>
 <script>
+  import {applyMapPreference} from '../lib/map-preference';
   import {startAnalytics} from '../scripts/analytics';
   import {enableApp} from '../scripts/pwa';
 
@@ -89,6 +93,7 @@ const activeSection = section ?? (guideDestinations.some(({route}) => canonical.
     }
   });
 
+  applyMapPreference();
   enableApp();
   startAnalytics();
 </script>

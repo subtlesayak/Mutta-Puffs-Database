@@ -1,26 +1,30 @@
 ---
 import Icon from './Icon.astro';
 import {path} from '../lib/format';
+import {labelSets, type Locale} from '../lib/locales';
 
 interface Props {
   variant: 'desktop' | 'mobile';
   pathname: string;
   activeSection?: string;
+  locale: Locale;
 }
 
-const { variant, pathname, activeSection } = Astro.props;
+const { variant, pathname, activeSection, locale } = Astro.props;
+const labels = labelSets[locale];
 const links = [
-  ['Explore', ''],
-  ['Puff Map', 'map/'],
-  ['Cities', 'cities/'],
-  ['Puff Guide', 'guide/'],
-  ['Insights', 'insights/'],
+  ['Explore', locale === 'en' ? '' : locale + '/', labels.explore],
+  ['Puff Map', 'map/', labels.map],
+  ['Cities', 'cities/', labels.cities],
+  ['Puff Guide', 'guide/', labels.guide],
+  ['Insights', 'insights/', labels.insights],
+  ['Language', 'languages/', labels.language],
 ];
 const contributeHref = path('contribute/');
 ---
-<nav class={`navigation-${variant}`} aria-label="Main navigation">
-  {links.map(([label, route]) => (
-    <a href={path(route)} aria-current={pathname === path(route) ? 'page' : activeSection === label ? 'true' : undefined}>{label}</a>
+<nav class={`navigation-${variant}`} aria-label={labels.mainNav}>
+  {links.map(([section, route, label]) => (
+    <a href={path(route)} aria-current={pathname === path(route) ? 'page' : activeSection === section ? 'true' : undefined}>{label}</a>
   ))}
-  <a class="button small" href={contributeHref} aria-current={pathname === contributeHref ? 'page' : undefined}>Contribute <Icon name="arrow" size={16} /></a>
+  <a class="button small" href={contributeHref} aria-current={pathname === contributeHref ? 'page' : undefined}>{labels.contribute} <Icon name="arrow" size={16} /></a>
 </nav>

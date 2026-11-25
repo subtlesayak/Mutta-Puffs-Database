@@ -1,7 +1,8 @@
-import maplibregl, {type GeoJSONSource, type MapGeoJSONFeature} from 'maplibre-gl';
+import type {GeoJSONSource, MapGeoJSONFeature} from 'maplibre-gl';
 import type {Feature, FeatureCollection, Point} from 'geojson';
 import {accuracyLabels, path, placeCount, placePath} from '../lib/format';
 import {metricMatcher} from '../lib/metric-filters';
+import {pagePlaceAliases, resolvePlaceId} from '../lib/place-identity';
 import type {Accuracy, City, PlaceMetrics, Trail} from '../lib/types';
 import type {openGoogleMap} from './google-map';
 
@@ -29,68 +30,50 @@ export async function startMap() {
   const density = root.querySelector<HTMLInputElement>('[name=density]')!;
   const pinsKey = root.querySelector<HTMLElement>('[data-pins-key]')!;
   const densityKey = root.querySelector<HTMLElement>('[data-density-key]')!;
+  const streetAttribution = root.querySelector<HTMLElement>('[data-street-attribution]')!;
   const googleCanvas = root.querySelector<HTMLElement>('[data-google-canvas]');
   const renderer = root.querySelector<HTMLSelectElement>('[name=renderer]');
   let googleView: Awaited<ReturnType<typeof openGoogleMap<Pin>>> | null = null;
   let googlePending: Promise<Awaited<ReturnType<typeof openGoogleMap<Pin>>>> | null = null;
-  let activeRenderer: 'atlas' | 'google' = 'atlas';
+  let activeRenderer: 'atlas' | 'street' | 'google' = 'atlas';
   let rendererRequest = 0;
   const motion = matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 420;
   const params = new URLSearchParams(location.search);
-  const urlPlace = params.get('place');
+  const urlPlace = resolvePlaceId(params.get('place') ?? '', pagePlaceAliases());
   const linkedFilters = [city, region, district, trail, verification, accuracy, view];
-  const unavailable = () => {
-    status.textContent = 'The map is unavailable on this device. Use the place list below.';
-    frame.hidden = true;
-    form.hidden = true;
-  };
-
-  let map: maplibregl.Map;
+  let maplibregl: typeof import('maplibre-gl') | undefined;
+  let map: import('maplibre-gl').Map | undefined;
+  let initializing = false;
+  let interactive = false;
+  let mapUnavailable = false;
   let pins: Pins;
   let cities: City[];
   let trails: Trail[];
   let metrics: Record<string,PlaceMetrics>;
   try {
-    const responses = await Promise.all(['places.geojson','cities.json','trails.json','place-metrics.json'].map(file => fetch(path('api/v1/' + file))));
+    const responses = await Promise.all(['places.geojson','cities.json','trails.json'].map(file => fetch(path('api/v1/' + file))));
     if (responses.some(response => !response.ok)) throw new Error('Map data unavailable');
-    [pins, {cities}, {trails}, {place_metrics:metrics}] = await Promise.all(responses.map(response => response.json()));
-    map = new maplibregl.Map({
-      container: canvas, center: [75.8,11], zoom: 4.5, minZoom: 1, maxZoom: 16,
-      style: {version: 8, sources: {
-        land: {type: 'geojson', data: path('basemap.geojson'), attribution: 'Natural Earth'},
-        places: {type: 'geojson', data: pins, cluster: true, clusterRadius: 42, clusterMaxZoom: 13},
-        density: {type: 'geojson', data: pins},
-      }, layers: [
-        {id: 'water', type: 'background', paint: {'background-color': '#e4ebdf'}},
-        {id: 'land', type: 'fill', source: 'land', paint: {'fill-color':'#fff4dc'}},
-        {id: 'boundaries', type: 'line', source: 'land', paint: {'line-color':'#aa9877','line-width':.75}},
-        {id: 'heat', type: 'heatmap', source: 'density', layout: {visibility: 'none'}, paint: {
-          'heatmap-radius': ['interpolate',['linear'],['zoom'],3,15,11,30],
-          'heatmap-opacity': .8,
-          'heatmap-color': ['interpolate',['linear'],['heatmap-density'],0,'rgba(246,218,157,0)',.25,'#f3c766',.55,'#c65d31',.8,'#963e24',1,'#592217'],
-        }},
-        {id: 'clusters', type: 'circle', source: 'places', filter: ['has','point_count'], paint: {
-          'circle-color': '#253f31', 'circle-stroke-color':'#fff4dc','circle-stroke-width':2,
-          'circle-radius': ['step',['get','point_count'],15,12,20,30,25],
-        }},
-        {id: 'counts', type: 'symbol', source: 'places', filter: ['has','point_count'], layout: {
-          'text-field': ['get','point_count_abbreviated'], 'text-size': 13, 'text-font': ['Arial'],
-          'text-allow-overlap': true,
-        }, paint: {'text-color': '#fff4dc'}},
-        {id: 'pins', type: 'circle', source: 'places', filter: ['!', ['has','point_count']], paint: {
-          'circle-color': ['match',['get','accuracy'],'verified','#2b5c3b','source_pin','#ae661f','#963e24'],
-          'circle-radius': 7, 'circle-stroke-color':'#fff4dc', 'circle-stroke-width': 2,
-        }},
-      ]},
-    });
+    [pins, {cities}, {trails}] = await Promise.all(responses.map(response => response.json()));
   } catch {
-    unavailable();
+    status.textContent = 'Could not load the interactive directory. Browse the saved places below.';
+    frame.hidden = true;
+    form.hidden = true;
+    const index = document.querySelector<HTMLDetailsElement>('.map-index');
+    if (index) index.open = true;
     return;
   }
+  metrics = {};
+  void fetch(path('api/v1/place-metrics.json')).then(async response => {
+    if (!response.ok) return;
+    ({place_metrics:metrics} = await response.json());
+    if (form.querySelector<HTMLInputElement>('[name=min_score]')?.value ||
+        form.querySelector<HTMLInputElement>('[name=price_status]')?.value) update();
+  }).catch(() => {});
+
   const marks = new Map(pins.features.map(feature => [feature.properties.id,feature]));
   const lookAt = (feature: Feature<Point,Pin>, fly = true) => {
     const center = feature.geometry.coordinates as [number,number];
-    if (fly && activeRenderer === 'atlas') map.easeTo({center,zoom:Math.max(11,map.getZoom()),duration:motion});
+    if (fly && activeRenderer !== 'google' && map) map.easeTo({center,zoom:Math.max(11,map.getZoom()),duration:motion});
     const a = document.createElement('a');
     a.textContent = feature.properties.name;
     a.href = placePath(feature.properties.id);
@@ -101,14 +84,14 @@ export async function startMap() {
     popup.append(a.cloneNode(true),document.createElement('br'),document.createTextNode(accuracyLabels[feature.properties.accuracy]));
     if (activeRenderer === 'google') {
       googleView?.focus(feature,popup,fly);
-    } else {
+    } else if (map && maplibregl) {
       currentPopup?.remove();
       currentPopup = new maplibregl.Popup({offset:12}).setLngLat(center).setDOMContent(popup).addTo(map);
     }
     place.value = feature.properties.id;
     saveView();
   };
-  let currentPopup: maplibregl.Popup | null = null;
+  let currentPopup: import('maplibre-gl').Popup | null = null;
   const saveView = () => {
     const url = new URL(location.href);
     for (const {name,value} of [...linkedFilters, place]) {
@@ -134,20 +117,26 @@ export async function startMap() {
       (!verification.value || pin.status === verification.value) &&
       (!accuracy.value || pin.accuracy === accuracy.value) && matchesMetric(metrics[pin.id]));
     if (route) points.sort((a,b) => route.place_ids.indexOf(a.properties.id) - route.place_ids.indexOf(b.properties.id));
-    const data: Pins = {type:'FeatureCollection',features:points};
-    (map.getSource('places') as GeoJSONSource).setData(data);
-    (map.getSource('density') as GeoJSONSource).setData(data);
+    if (interactive && map) {
+      map.setLayoutProperty('street-tiles','visibility',view.value !== 'list' && activeRenderer === 'street' ? 'visible' : 'none');
+      const data: Pins = {type:'FeatureCollection',features:points};
+      (map.getSource('places') as GeoJSONSource).setData(data);
+      (map.getSource('density') as GeoJSONSource).setData(data);
+    }
     const current = place.value;
     place.replaceChildren(new Option('Choose a place',''), ...points.slice().sort((a,b)=>a.properties.name.localeCompare(b.properties.name))
       .map(p => new Option(p.properties.name + (p.properties.city ? ' · ' + p.properties.city : ''),p.properties.id)));
     if (points.some(p=>p.properties.id === current)) place.value = current;
     const showList = view.value === 'list';
+    streetAttribution.hidden = showList || activeRenderer !== 'street';
     list.hidden = !showList;
     frame.hidden = showList;
-    density.disabled = showList || activeRenderer === 'google';
-    place.disabled = showList;
-    if (renderer) renderer.disabled = showList;
-    status.textContent = points.length ? placeCount(points.length) + (showList ? ' in the list' : ' on the map') : 'No pins match these filters. Try a different city or clear a filter.';
+    density.disabled = !interactive || showList || activeRenderer === 'google';
+    place.disabled = !interactive || showList;
+    if (renderer) renderer.disabled = !interactive || showList;
+    const count = points.length ? placeCount(points.length) + (showList ? ' in the list.' : ' on the map.') : 'No places match. Clear filters or choose another area.';
+    status.textContent = mapUnavailable ? count + ' The interactive map is unavailable on this device.' :
+      !showList && !interactive ? 'Loading the atlas map…' : count;
     if (showList) {
       list.replaceChildren(...points.map(({properties:pin}) => {
         const li = document.createElement('li');
@@ -161,10 +150,11 @@ export async function startMap() {
         li.append(link,note);
         return li;
       }));
-    } else if (activeRenderer === 'atlas') map.resize();
+    } else if (interactive && activeRenderer !== 'google') map?.resize();
     currentPopup?.remove();
     selection.replaceChildren();
-    if (showList) {saveView(); return;}
+    if (!showList && !initializing && !map && !mapUnavailable) void initializeMap();
+    if (showList || !interactive || !map || !maplibregl) {saveView(); return;}
     if (activeRenderer === 'google') googleView?.update(points);
     else if (points.length === 1) map.easeTo({center: points[0].geometry.coordinates as [number,number],zoom:11,duration:motion});
     else if (points.length > 1) {
@@ -175,16 +165,16 @@ export async function startMap() {
     saveView();
   };
 
-  function showAtlas(message = '') {
+  function showAtlas(message = '', style: 'atlas' | 'street' = 'atlas') {
     rendererRequest++;
-    activeRenderer = 'atlas';
-    if (renderer) renderer.value = 'atlas';
+    activeRenderer = style;
+    if (renderer) renderer.value = style;
     if (googleCanvas) googleCanvas.hidden = true;
     canvas.hidden = false;
     density.disabled = false;
     pinsKey.hidden = density.checked;
     densityKey.hidden = !density.checked;
-    map.resize();
+    map?.resize();
     update();
     const selected = marks.get(place.value);
     if (selected) lookAt(selected);
@@ -192,8 +182,9 @@ export async function startMap() {
   }
 
   async function switchMap() {
-    if (!googleCanvas || !renderer || !root?.dataset.googleKey || !root.dataset.googleId) return;
-    if (renderer.value !== 'google') {showAtlas(); return;}
+    if (!renderer) return;
+    if (renderer.value !== 'google') {showAtlas('',renderer.value === 'street' ? 'street' : 'atlas'); return;}
+    if (!googleCanvas || !root?.dataset.googleKey || !root.dataset.googleId) {showAtlas(); return;}
     const request = ++rendererRequest;
     const failure = 'Google Maps could not load. The atlas map is available.';
     status.textContent = 'Loading Google Maps…';
@@ -221,51 +212,157 @@ export async function startMap() {
     }
   }
 
-  map.addControl(new maplibregl.NavigationControl({showCompass:false}),'top-right');
-  if (navigator.geolocation) map.addControl(new maplibregl.GeolocateControl({
-    positionOptions:{enableHighAccuracy:false}, fitBoundsOptions:{maxZoom:12}, trackUserLocation:false,
-  }),'top-right');
-  map.on('error', event => {
-    if (!map.isStyleLoaded() && !status.textContent?.includes('places on')) unavailable();
-    console.warn('Atlas map:', event.error.message);
-  });
-  map.on('load', () => {
-    for (const filter of linkedFilters) {
-      const requested = params.get(filter.name);
-      if (requested && [...filter.options].some(option => option.value === requested)) filter.value = requested;
-    }
+  function updateDistrictOptions() {
+    const current = district.value;
+    const cityPlaces = cities.find(item => item.id === city.value)?.place_ids;
+    const allowed = cityPlaces ? new Set(cityPlaces) : null;
+    const options = new Set(pins.features.filter(({properties: pin}) =>
+      (!allowed || allowed.has(pin.id)) && (!region.value || [pin.state,pin.country].includes(region.value)))
+      .map(({properties: pin}) => pin.district ? [pin.district,pin.state].filter(Boolean).join(' · ') : '').filter(Boolean));
+    district.replaceChildren(new Option('All districts',''), ...[...options].sort().map(name => new Option(name)));
+    district.disabled = options.size === 0;
+    if (options.has(current)) district.value = current;
+  }
+
+  function useListFallback() {
+    interactive = false;
+    mapUnavailable = true;
+    view.value = 'list';
+    view.disabled = true;
     update();
-    const initial = urlPlace && marks.get(urlPlace);
-    if (initial && view.value !== 'list' && [...place.options].some(option => option.value === urlPlace)) lookAt(initial);
-    for (const filter of linkedFilters) filter.addEventListener('change',update);
-    form.querySelector('.metric-filters')?.addEventListener('input',update);
-    form.addEventListener('submit',event => event.preventDefault());
-    renderer?.addEventListener('change',() => {void switchMap();});
-    place.addEventListener('change',() => {
-      const feature = marks.get(place.value);
-      if (feature) lookAt(feature); else { currentPopup?.remove(); googleView?.clear(); selection.replaceChildren(); saveView(); }
+  }
+
+  for (const filter of linkedFilters) {
+    const value = params.get(filter.name);
+    const requested = filter === district && value === 'Hydrabad · Telangana' ? 'Hyderabad · Telangana' : value;
+    if (requested && [...filter.options].some(option => option.value === requested)) filter.value = requested;
+    filter.addEventListener('change',() => {
+      if (filter === city || filter === region) {
+        const selected = cities.find(item => item.id === city.value);
+        if (selected && region.value && ![selected.state,selected.country].includes(region.value)) {
+          if (filter === city) region.value = '';
+          else city.value = '';
+        }
+        updateDistrictOptions();
+      }
+      update();
     });
-    density.addEventListener('change',() => {
-      pinsKey.hidden = density.checked;
-      densityKey.hidden = !density.checked;
-      map.setLayoutProperty('heat','visibility',density.checked ? 'visible' : 'none');
-      for (const layer of ['clusters','counts','pins']) map.setLayoutProperty(layer,'visibility',density.checked ? 'none' : 'visible');
+  }
+  updateDistrictOptions();
+  form.querySelector('.metric-filters')?.addEventListener('input',update);
+  form.addEventListener('submit',event => event.preventDefault());
+  form.addEventListener('reset',() => {
+    const selectedView = view.value;
+    queueMicrotask(() => {
+      view.value = selectedView;
+      if (renderer) renderer.value = activeRenderer;
+      pinsKey.hidden = activeRenderer === 'google';
+      densityKey.hidden = true;
+      if (interactive && map) {
+        map.setLayoutProperty('heat','visibility','none');
+        for (const layer of ['clusters','counts','pins']) map.setLayoutProperty(layer,'visibility','visible');
+      }
+      googleView?.clear();
+      updateDistrictOptions();
+      update();
     });
-    map.on('click','clusters', async event => {
-      const feature = event.features?.[0];
-      if (!feature || feature.geometry.type !== 'Point') return;
-      const cluster = Number(feature.properties.cluster_id);
-      const zoom = await (map.getSource('places') as GeoJSONSource).getClusterExpansionZoom(cluster).catch(() => null);
-      if (zoom !== null) map.easeTo({center:feature.geometry.coordinates as [number,number],zoom,duration:motion});
-    });
-    map.on('click','pins',event => {
-      const id = (event.features?.[0] as MapGeoJSONFeature | undefined)?.properties?.id;
-      const feature = marks.get(id);
-      if (feature) lookAt(feature,false);
-    });
-    for (const layer of ['clusters','pins']) {
-      map.on('mouseenter',layer,()=>{map.getCanvas().style.cursor = 'pointer';});
-      map.on('mouseleave',layer,()=>{map.getCanvas().style.cursor = '';});
-    }
   });
+  renderer?.addEventListener('change',() => {void switchMap();});
+  place.addEventListener('change',() => {
+    const feature = marks.get(place.value);
+    if (feature) lookAt(feature);
+    else { currentPopup?.remove(); googleView?.clear(); selection.replaceChildren(); saveView(); }
+  });
+  async function initializeMap() {
+    initializing = true;
+    try {
+      const [library, worker] = await Promise.all([
+        import('maplibre-gl'),
+        import('maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url'),
+      ]);
+      maplibregl = library;
+      library.setWorkerUrl(worker.default);
+      map = new library.Map({
+        container: canvas, attributionControl: false, center: [75.8,11], zoom: 4.5, minZoom: 1, maxZoom: 19,
+        style: {version: 8, sources: {
+          land: {type: 'geojson', data: path('basemap.geojson'), attribution: 'Natural Earth'},
+          streets: {
+            type: 'raster', tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'], tileSize: 256, maxzoom: 19,
+            attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+          },
+          places: {type: 'geojson', data: pins, cluster: true, clusterRadius: 42, clusterMaxZoom: 13},
+          density: {type: 'geojson', data: pins},
+        }, layers: [
+          {id: 'water', type: 'background', paint: {'background-color': '#e4ebdf'}},
+          {id: 'land', type: 'fill', source: 'land', paint: {'fill-color':'#fff4dc'}},
+          {id: 'boundaries', type: 'line', source: 'land', paint: {'line-color':'#aa9877','line-width':.75}},
+          {id: 'street-tiles', type: 'raster', source: 'streets', layout: {visibility: 'none'}},
+          {id: 'heat', type: 'heatmap', source: 'density', layout: {visibility: 'none'}, paint: {
+            'heatmap-radius': ['interpolate',['linear'],['zoom'],3,15,11,30],
+            'heatmap-opacity': .8,
+            'heatmap-color': ['interpolate',['linear'],['heatmap-density'],0,'rgba(246,218,157,0)',.25,'#f3c766',.55,'#c65d31',.8,'#963e24',1,'#592217'],
+          }},
+          {id: 'clusters', type: 'circle', source: 'places', filter: ['has','point_count'], paint: {
+            'circle-color': '#253f31', 'circle-stroke-color':'#fff4dc','circle-stroke-width':2,
+            'circle-radius': ['step',['get','point_count'],15,12,20,30,25],
+          }},
+          {id: 'counts', type: 'symbol', source: 'places', filter: ['has','point_count'], layout: {
+            'text-field': ['get','point_count_abbreviated'], 'text-size': 13, 'text-font': ['Arial'],
+            'text-allow-overlap': true,
+          }, paint: {'text-color': '#fff4dc'}},
+          {id: 'pins', type: 'circle', source: 'places', filter: ['!', ['has','point_count']], paint: {
+            'circle-color': ['match',['get','accuracy'],'verified','#2b5c3b','source_pin','#ae661f','#963e24'],
+            'circle-radius': 7, 'circle-stroke-color':'#fff4dc', 'circle-stroke-width': 2,
+          }},
+        ]},
+      });
+      const atlasMap = map;
+      atlasMap.addControl(new library.NavigationControl({showCompass:false}),'top-right');
+      if (navigator.geolocation) atlasMap.addControl(new library.GeolocateControl({
+        positionOptions:{enableHighAccuracy:false}, fitBoundsOptions:{maxZoom:12}, trackUserLocation:false,
+      }),'top-right');
+      atlasMap.on('error', event => {
+        // A tile provider can fail independently of the atlas data and offline basemap.
+        if (activeRenderer === 'street' && 'sourceId' in event && event.sourceId === 'streets') {
+          showAtlas('Street tiles are unavailable. Showing the offline atlas.');
+        } else if (!interactive && !atlasMap.isStyleLoaded()) useListFallback();
+        console.warn('Atlas map:', event.error.message);
+      });
+      atlasMap.on('load', () => {
+        interactive = true;
+        mapUnavailable = false;
+        view.disabled = false;
+        update();
+        const initial = urlPlace && marks.get(urlPlace);
+        if (initial && view.value !== 'list' && [...place.options].some(option => option.value === urlPlace)) lookAt(initial);
+      });
+      density.addEventListener('change',() => {
+        pinsKey.hidden = density.checked;
+        densityKey.hidden = !density.checked;
+        atlasMap.setLayoutProperty('heat','visibility',density.checked ? 'visible' : 'none');
+        for (const layer of ['clusters','counts','pins']) atlasMap.setLayoutProperty(layer,'visibility',density.checked ? 'none' : 'visible');
+      });
+      atlasMap.on('click','clusters', async event => {
+        const feature = event.features?.[0];
+        if (!feature || feature.geometry.type !== 'Point') return;
+        const cluster = Number(feature.properties.cluster_id);
+        const zoom = await (atlasMap.getSource('places') as GeoJSONSource).getClusterExpansionZoom(cluster).catch(() => null);
+        if (zoom !== null) atlasMap.easeTo({center:feature.geometry.coordinates as [number,number],zoom,duration:motion});
+      });
+      atlasMap.on('click','pins',event => {
+        const id = (event.features?.[0] as MapGeoJSONFeature | undefined)?.properties?.id;
+        const feature = marks.get(id);
+        if (feature) lookAt(feature,false);
+      });
+      for (const layer of ['clusters','pins']) {
+        atlasMap.on('mouseenter',layer,()=>{atlasMap.getCanvas().style.cursor = 'pointer';});
+        atlasMap.on('mouseleave',layer,()=>{atlasMap.getCanvas().style.cursor = '';});
+      }
+    } catch {
+      useListFallback();
+    } finally {
+      initializing = false;
+    }
+  }
+  update();
 }

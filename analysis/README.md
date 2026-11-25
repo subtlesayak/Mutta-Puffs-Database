@@ -48,7 +48,7 @@
 | Kannur · Kerala | 3 |
 | Wayanad · Kerala | 3 |
 | Chengalputtu · Tamil Nadu | 2 |
-| Hydrabad · Telangana | 2 |
+| Hyderabad · Telangana | 2 |
 | Pathanamthitta · Kerala | 2 |
 | Pune · Maharashtra | 2 |
 | Dakshina Kannada · Karnataka | 1 |

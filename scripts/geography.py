@@ -170,9 +170,9 @@ class Boundaries:
     def district(self, point):
         name, _ = self.containing(self.districts, point)
         if name:
-            return name, "Inside district boundary"
+            return "Hyderabad" if name == "Hydrabad" else name, "Inside district boundary"
         name, _ = self.nearby(self.districts, point)
-        return name, "Near district boundary" if name else "District unassigned"
+        return "Hyderabad" if name == "Hydrabad" else name, "Near district boundary" if name else "District unassigned"
 
     def southern_outlines(self):
         """Only return outlines that intersect the illustrated map bounds."""

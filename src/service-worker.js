@@ -45,8 +45,10 @@ self.addEventListener('fetch', event => {
     const cache = await caches.open(CACHE_NAME);
     const navigation = request.mode === 'navigate';
     const dataset = url.pathname.startsWith(route('api/').pathname);
+    // Fingerprinted bundles have identical bytes for precache, module, and font requests.
+    const matchOptions = {ignoreSearch:navigation, ignoreVary:url.pathname.startsWith(route('_astro/').pathname)};
     if (!navigation && !dataset) {
-      const cached = await cache.match(request);
+      const cached = await cache.match(request, matchOptions);
       if (cached) return cached;
     }
     try {
@@ -55,7 +57,7 @@ self.addEventListener('fetch', event => {
       if (response.ok && (!navigation || !url.search)) await cache.put(request, response.clone());
       return response;
     } catch {
-      return (await cache.match(request, {ignoreSearch:navigation}))
+      return (await cache.match(request, matchOptions))
         || (navigation && await cache.match(route('offline/')))
         || Response.error();
     }
