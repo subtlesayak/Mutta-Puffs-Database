@@ -16,7 +16,7 @@ The [Puff Leaderboard](https://subtlesayak.github.io/Mutta-Puffs-Database/leader
 2. Open a public shop listing or pin in Maps, tap **Share**, and choose **Mutta Puffs** when it appears in the share sheet.
 3. Review the prefilled draft, complete the shop details, and choose **Continue on GitHub** to submit it for review with your GitHub account.
 
-On browsers without share-target support, including iPhone Safari, copy the link and paste it into **Contribute → Paste a shared link or location**. At the shop, you can also choose **Use my current location** to fill in a pin. Drafts can be saved on your device while offline. You can also correct a listing, review a puff, or add a photo or a dated price.
+Android Edge may add a home-screen shortcut without registering a share target. If Mutta Puffs is missing from the share sheet, copy the Maps link and use **Contribute → Paste a Maps link or pin**. The same paste flow works on iPhone. At the shop, you can also choose **Use my current location** to fill in a pin. You can save a draft on your device while offline, correct a listing, rate a puff, or add a photo or a dated price.
 
 ## Data
 
