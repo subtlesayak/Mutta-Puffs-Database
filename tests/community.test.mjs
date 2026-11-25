@@ -3,9 +3,31 @@ import {createHash, randomBytes, randomUUID} from 'node:crypto';
 import test from 'node:test';
 import {createCommunityServer,openCommunityDatabase} from '../server/community.mjs';
 import {parseSubmission} from '../server/submissions.mjs';
+import {placeMissions} from '../src/lib/verification-missions.ts';
 
 const origin = 'https://subtlesayak.github.io';
 const moderatorToken = randomBytes(32).toString('base64url');
+
+test('verification missions distinguish incomplete listings, source pins, and verified coordinates', () => {
+  const tasks = (status,accuracy) => placeMissions({verification:{status},location:{accuracy}});
+  assert.deepEqual(tasks('needs_details','estimated'),['details','pin']);
+  assert.deepEqual(tasks('needs_details','unknown'),['details']);
+  assert.deepEqual(tasks('unverified','source_pin'),['pin']);
+  assert.deepEqual(tasks('verified','estimated'),['pin']);
+  assert.deepEqual(tasks('verified','verified'),[]);
+});
+
+test('a pin mission requires a visit date and a public HTTPS link without changing general corrections', () => {
+  const submit = fields => parseSubmission({kind:'correction',consent:true,fields:{
+    place_id:'mpdb-7b2be6dd7ad3',correction:'First-hand fixture notes',...fields,
+  }});
+  assert.equal(submit({}).fields.mission,undefined);
+  assert.throws(()=>submit({mission:'details'}),/date you checked/);
+  assert.throws(()=>submit({mission:'pin',verified_on:'2026-01-01'}),/public pin/);
+  assert.throws(()=>submit({mission:'pin',verified_on:'2026-01-01',evidence:'http://maps.example/shop'}),/evidence/);
+  assert.equal(submit({mission:'details',verified_on:'2026-01-01'}).fields.mission,'details');
+  assert.equal(submit({mission:'pin',verified_on:'2026-01-01',evidence:'https://maps.example/shop'}).fields.mission,'pin');
+});
 
 test('submission formats validate consent, scores, dates and public evidence', () => {
   const review = {kind:'review',consent:true,fields:{

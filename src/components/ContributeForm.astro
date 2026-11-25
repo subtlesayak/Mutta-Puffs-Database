@@ -5,6 +5,8 @@ import {atlas} from '../lib/catalogue';
 import {github} from '../lib/format';
 import {communityConfigured} from '../lib/community';
 import {contributionCopy, type ContributionRuntimeCopy} from '../lib/contribution-copy';
+import {missionCopy} from '../lib/mission-copy';
+import {missionTypes} from '../lib/verification-missions';
 import {translatedPlaceName} from '../lib/place-search';
 import type {ContributionKind} from '../lib/github-draft';
 import type {Locale} from '../lib/locales';
@@ -14,6 +16,7 @@ const {locale = 'en'} = Astro.props;
 const copy = contributionCopy[locale];
 const f = copy.form;
 const s = copy.sidebar;
+const verification = missionCopy[locale];
 const forms = Object.entries(copy.kinds);
 const runtime: ContributionRuntimeCopy = {
   ...copy.status,undo:f.undo,replaceUndo:f.replaceUndo,observationErrors:copy.observationErrors,
@@ -25,7 +28,7 @@ const scores = Object.entries(f.scores);
   <div class="shell">
     <header class="page-head"><p class="kicker">{copy.title}</p><h1>{copy.heading}</h1><p>{communityConfigured ? copy.introCommunity : copy.intro}</p></header>
     <div class="contribute-grid">
-      <form class="panel" data-contribution data-github={github} data-contribution-copy={JSON.stringify(runtime)}>
+      <form class="panel" data-contribution data-github={github} data-contribution-copy={JSON.stringify(runtime)} data-mission-error={verification.evidenceError}>
         <p data-import-status class="import-status" role="status"></p>
         <label class="field">{f.chooseKind} <select id="kind">{forms.map(([kind,title]) => <option value={kind} data-issue-prefix={contributionCopy.en.kinds[kind as ContributionKind]}>{title}</option>)}</select></label>
         <div class="contribution-fields" data-capture>
@@ -53,6 +56,11 @@ const scores = Object.entries(f.scores);
         </div>
         <fieldset class="contribution-fields" data-kind="correction" hidden disabled>
           <legend>{f.correctionLegend}</legend>
+          <input type="hidden" name="mission" disabled />
+          {missionTypes.map(mission => <div id={'mission-help-' + mission} class="mission-help" data-mission-help={mission} hidden>
+            <strong>{verification.labels[mission]}</strong>
+            <p>{verification.draftHelp[mission]}</p>
+          </div>)}
           <label class="field">{f.correction} <textarea name="correction" maxlength="900" required placeholder={copy.examples.correction}></textarea></label>
           <label class="field">{f.evidence} <input name="evidence" type="url" maxlength="650" placeholder="https://…" /></label>
           <label class="field">{f.verified_on} <input name="verified_on" type="date" aria-describedby="verification-help" /></label>
@@ -162,6 +170,8 @@ const scores = Object.entries(f.scores);
   .github-draft summary {cursor:pointer; font-weight:750;}
   .github-draft textarea {margin-block-start:.25rem;}
   legend {font-weight:800; margin-block-end:.55rem;}
+  .mission-help {background:var(--sage);color:var(--pine);padding:.7rem .8rem;border-radius:.5rem;}
+  .mission-help p {margin-block-start:.25rem;}
   [data-form-error]:not(:empty) {margin-block:.55rem; color:var(--rust); font-weight:800;}
   .field .field-error {color:var(--rust); font-weight:750;}
   .import-status:not(:empty) {margin-block-end:.85rem; padding:.6rem .7rem; border-radius:.5rem; background:var(--sage); color:var(--pine); font-weight:750;}
@@ -191,6 +201,7 @@ const scores = Object.entries(f.scores);
   import type {ContributionRuntimeCopy} from '../lib/contribution-copy';
   import {preferredLocale} from '../lib/language-preference';
   import {localizedPath} from '../lib/format';
+  import {isHttpsLink, isVerificationMission} from '../lib/verification-missions';
   const form = document.querySelector<HTMLFormElement>('[data-contribution]')!;
   const copy = JSON.parse(form.dataset.contributionCopy!) as ContributionRuntimeCopy;
   const locale = document.documentElement.lang;
@@ -205,6 +216,11 @@ const scores = Object.entries(f.scores);
   const clipboard = form.querySelector<HTMLButtonElement>('[data-paste-clipboard]')!;
   const ratings = [...form.querySelectorAll<HTMLInputElement>('.rating-field input')];
   const observationInputs = [...form.querySelectorAll<HTMLInputElement>('[data-observation-input]')];
+  const missionField = form.querySelector<HTMLInputElement>('[name=mission]')!;
+  const missionHelp = [...form.querySelectorAll<HTMLElement>('[data-mission-help]')];
+  const correctionNotes = form.querySelector<HTMLTextAreaElement>('[name=correction]')!;
+  const verificationDate = form.querySelector<HTMLInputElement>('[name=verified_on]')!;
+  const evidence = form.querySelector<HTMLInputElement>('[name=evidence]')!;
   const saveButton = form.querySelector<HTMLButtonElement>('[data-save-draft]')!;
   const savedButton = form.querySelector<HTMLButtonElement>('[data-clear-draft]')!;
   const undoButton = form.querySelector<HTMLButtonElement>('[data-undo-draft]')!;
@@ -227,6 +243,8 @@ const scores = Object.entries(f.scores);
   const aliases = pagePlaceAliases();
   const requestedPlace = resolvePlaceId(params.get('place') ?? '', aliases);
   if ([...listing.options].some(option => option.value === requestedPlace)) listing.value = requestedPlace;
+  const requestedMission = params.get('mission');
+  if (kind.value === 'correction' && isVerificationMission(requestedMission)) missionField.value = requestedMission;
   const currentDraft = () => ({kind:kind.value,fields:Object.fromEntries(new FormData(form))});
   function restoreDraft(draft: {kind?: unknown; fields?: Record<string,unknown>}, keepConsent = false) {
     if ([...kind.options].some(option => option.value === draft.kind)) kind.value = draft.kind as string;
@@ -242,6 +260,7 @@ const scores = Object.entries(f.scores);
     const destination = new URL(link.href);
     if (params.has('kind')) destination.searchParams.set('kind',kind.value);
     if (listing.value) destination.searchParams.set('place',listing.value);
+    if (missionField.value) destination.searchParams.set('mission',missionField.value);
     link.href = destination.href;
     link.addEventListener('click',event => {
       if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
@@ -252,6 +271,8 @@ const scores = Object.entries(f.scores);
       destination.searchParams.set('kind',kind.value);
       if (listing.value) destination.searchParams.set('place',listing.value);
       else destination.searchParams.delete('place');
+      if (missionField.value && !missionField.disabled) destination.searchParams.set('mission',missionField.value);
+      else destination.searchParams.delete('mission');
       link.href = destination.href;
       const draft = currentDraft();
       const hasDetails = Object.entries(draft.fields).some(([name,value]) => name !== 'place_id' && value &&
@@ -289,6 +310,13 @@ const scores = Object.entries(f.scores);
     linked.hidden = kind.value === 'place' || kind.value === 'heritage';
     listing.disabled = linked.hidden;
     capture.hidden = kind.value !== 'place' && kind.value !== 'correction';
+    const mission = kind.value === 'correction' && isVerificationMission(missionField.value) ? missionField.value : null;
+    missionField.disabled = !mission;
+    verificationDate.required = Boolean(mission);
+    evidence.required = mission === 'pin';
+    for (const help of missionHelp) help.hidden = help.dataset.missionHelp !== mission;
+    if (mission) correctionNotes.setAttribute('aria-describedby','mission-help-' + mission);
+    else correctionNotes.removeAttribute('aria-describedby');
     if (kind.value === 'correction' && sharedLink && !field('evidence')?.value) field('evidence')!.value = sharedLink;
     ratings.forEach(showRating);
     alert.textContent = '';
@@ -462,6 +490,11 @@ const scores = Object.entries(f.scores);
         input.focus();
         return;
       }
+    }
+    if (data.has('mission') && evidence.value && !isHttpsLink(evidence.value.trim())) {
+      alert.textContent = form.dataset.missionError ?? '';
+      evidence.focus();
+      return;
     }
     if (sending && event.submitter !== githubSubmit) {
       if (sending.disabled) return;

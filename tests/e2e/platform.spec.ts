@@ -43,7 +43,7 @@ test('localized city directories lead to localized listings and keep the same li
     await page.getByRole('link',{name:city,exact:true}).click();
     await expect(page.locator('html')).toHaveAttribute('lang',locale);
     await expect(page.getByRole('heading',{level:1})).toContainText(city);
-    await expect(page.locator('.city-actions a').last()).toHaveAttribute('href',new URL(locale + '/?city=hyderabad#nearby',baseURL!).pathname + '?city=hyderabad#nearby');
+    await expect(page.locator('.city-actions a[href*="#nearby"]')).toHaveAttribute('href',new URL(locale + '/?city=hyderabad#nearby',baseURL!).pathname + '?city=hyderabad#nearby');
     await page.getByRole('link',{name:"Sam's Bakers",exact:true}).click();
     await expect(page).toHaveURL(new URL(locale + '/places/' + examplePlace + '/',baseURL!).href);
     await expect(page.getByRole('heading',{name:directions,exact:true})).toBeVisible();
@@ -232,6 +232,9 @@ test.describe('PWA',()=>{
       await page.goto('ml/map/?view=list&city=hyderabad');
       await expect(page.getByRole('heading',{name:'പഫ് ഭൂപടം',exact:true})).toBeVisible();
       await expect(page.locator('[data-map-list]')).toContainText("Sam's Bakers");
+      await page.goto('ml/missions/?area=Hyderabad&mission=pin');
+      await expect(page.locator('[name=mission]')).toHaveValue('pin');
+      await expect(page.locator('[data-mission-card=pin]:visible').getByRole('link',{name:"Sam's Bakers",exact:true})).toBeVisible();
     } finally {
       await context.setOffline(false);
     }

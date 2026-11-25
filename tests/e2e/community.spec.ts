@@ -7,10 +7,24 @@ test('account-free submissions, moderation, and encrypted Passport sync', async 
   const moderator = randomBytes(32).toString('base64url');
   const db = openCommunityDatabase(':memory:');
   const source = 'https://github.com/subtlesayak/Mutta-Puffs-Database/issues/101';
+  const pinSource = 'https://github.com/subtlesayak/Mutta-Puffs-Database/issues/102';
+  const pinPlace = 'mpdb-7b2be6dd7ad3';
+  const pinDate = '2026-01-02';
+  const publicPin = 'https://maps.google.com/?q=17.4,78.4';
   let listed = false;
-  const api = createCommunityServer({db,origins:[new URL(baseURL!).origin],moderatorToken:moderator,fetchAtlas:async () => Response.json({
-    schema_version:1,places:listed ? [{name:'Example puff shop',source:{kind:'community',reference:source}}] : [],
-  })});
+  let pinVerified = false;
+  const api = createCommunityServer({db,origins:[new URL(baseURL!).origin],moderatorToken:moderator,fetchAtlas:async input => {
+    const url = new URL(input instanceof Request ? input.url : input);
+    if (url.pathname.endsWith('/place-aliases.json')) return Response.json({schema_version:1,aliases:{}});
+    return Response.json({schema_version:1,places:[
+      ...(listed ? [{name:'Example puff shop',source:{kind:'community',reference:source}}] : []),
+      {
+        id:pinPlace,
+        location:{accuracy:pinVerified ? 'verified' : 'estimated'},
+        verification:{reference:pinSource,status:pinVerified ? 'verified' : 'unverified',last_verified:pinDate},
+      },
+    ]});
+  }});
   await new Promise<void>((resolve,reject) => api.listen(0,'127.0.0.1',resolve).once('error',reject));
   try {
     const address = api.address();
@@ -80,6 +94,33 @@ test('account-free submissions, moderation, and encrypted Passport sync', async 
     await page.getByRole('button',{name:'Check status'}).click();
     await expect(page.locator('[data-receipt-status]')).toContainText('Your submission was published');
     await expect(page.getByRole('link',{name:'Open the published record'})).toHaveAttribute('href',source);
+
+    await page.goto('contribute/?kind=correction&place=' + pinPlace + '&mission=pin');
+    await page.getByLabel('Corrected pin or evidence link').fill(publicPin);
+    await page.getByLabel('What needs to change?').fill('Checked the public storefront pin during a visit.');
+    await page.getByLabel('Date you checked the place').fill(pinDate);
+    await consent.check();
+    await send.click();
+    await expect(page.getByLabel('Receipt code')).toHaveValue(/^[a-f\d-]{36}\.[a-zA-Z\d_-]{43}$/);
+    await review.getByLabel('Queue').selectOption('pending');
+    await expect(review.getByText('Check a map pin',{exact:true})).toBeVisible();
+    await expect(review.getByText(publicPin,{exact:true})).toBeVisible();
+    await review.getByRole('button',{name:'Approve for publication'}).click();
+    await expect(review.locator('[data-moderation-status]')).toContainText('There are no submissions');
+    await review.getByLabel('Queue').selectOption('approved');
+    const pinDraft = await review.getByRole('link',{name:'Open GitHub record'}).getAttribute('href');
+    const pinBody = new URL(pinDraft!).searchParams.get('body');
+    expect(pinBody).toContain('> Check a map pin');
+    expect(pinBody).toContain('> ' + pinDate);
+    expect(pinBody).toContain('> ' + publicPin);
+    await review.getByLabel('GitHub source in the live atlas').fill(pinSource);
+    await verify.click();
+    await expect(review.locator('[data-moderation-status]')).toContainText('does not show this contribution');
+    pinVerified = true;
+    await verify.click();
+    await expect(review.locator('[data-moderation-status]')).toContainText('There are no submissions');
+    await page.getByRole('button',{name:'Check status'}).click();
+    await expect(page.getByRole('link',{name:'Open the published record'})).toHaveAttribute('href',pinSource);
 
     const note = 'Private visit for the encrypted sync test.';
     const backup = {format:'mutta-puffs-passport',version:1,passport:{

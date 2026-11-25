@@ -54,6 +54,16 @@ test('reviews and observations require the published place, date and source link
   assert.equal(await isPublishedSubmission({kind:'review',fields},reference + '0',request),false);
 });
 
+test('a pin mission only publishes when the matching date and verified pin are in the public record', async () => {
+  const submission = {kind:'correction',fields:{place_id:retired,mission:'pin',verified_on:day}};
+  const state = (accuracy,last_verified) => fetchFixture({places:[{
+    ...shop,location:{accuracy},verification:{reference,status:'verified',last_verified},
+  }]});
+  assert.equal(await isPublishedSubmission(submission,reference,state('estimated',day)),false);
+  assert.equal(await isPublishedSubmission(submission,reference,state('verified','2026-01-03')),false);
+  assert.equal(await isPublishedSubmission(submission,reference,state('verified',day)),true);
+});
+
 test('an invalid public export is an unavailable check rather than publication evidence', async () => {
   const fields = {place_name:'Fixture Puff Shop',map_link:'https://maps.example/public'};
   await assert.rejects(isPublishedSubmission({kind:'place',fields},reference,async () => Response.json({places:[shop]})),/public export/);

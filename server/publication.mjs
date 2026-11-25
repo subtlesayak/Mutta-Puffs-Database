@@ -42,8 +42,12 @@ export async function isPublishedSubmission(submission, reference, request = fet
     if (kind === 'observation') return records.some(observation =>
       observation.source === reference && observation.place_id === placeId && observation.observed_on === fields.observed_on);
     const place = records.find(record => record.id === placeId);
-    return kind === 'correction' ? place?.verification?.reference === reference :
-      Boolean(place?.photos?.some(photo => photo.source === reference));
+    if (kind === 'correction') {
+      return place?.verification?.reference === reference && (fields.mission !== 'pin' ||
+        (place.location?.accuracy === 'verified' && place.verification.status === 'verified' &&
+          place.verification.last_verified === fields.verified_on));
+    }
+    return Boolean(place?.photos?.some(photo => photo.source === reference));
   };
   if (matches(fields.place_id)) return true;
   const data = await (await readAtlas('api/v1/place-aliases.json',request,signal)).json();

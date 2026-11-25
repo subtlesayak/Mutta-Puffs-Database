@@ -35,6 +35,7 @@ import {communityConfigured} from '../lib/community';
   import {communityRequest, type ModeratedSubmission} from '../lib/community';
   import {github} from '../lib/format';
   import {githubDraft} from '../lib/github-draft';
+  import {isVerificationMission, missionLabels} from '../lib/verification-missions';
 
   const root = document.querySelector<HTMLElement>('[data-moderation]');
   if (root) {
@@ -70,8 +71,10 @@ import {communityConfigured} from '../lib/community';
       article.append(node('h2',item.submission.kind.replace(/^./,character=>character.toUpperCase())),
         node('p',item.created_at.slice(0,10) + ' · ' + item.status + ' · ' + item.submission.license,'muted'));
       const details = node('dl');
-      for (const [label,value] of Object.entries(item.submission.fields)) {
-        details.append(node('dt',label.replaceAll('_',' ')),node('dd',value));
+      for (const [name,value] of Object.entries(item.submission.fields)) {
+        if (name === 'mission' && isVerificationMission(value)) {
+          details.append(node('dt','Verification task'),node('dd',missionLabels[value]));
+        } else details.append(node('dt',name.replaceAll('_',' ')),node('dd',value));
       }
       article.append(details);
       if (item.reason) article.append(node('p',item.reason));
