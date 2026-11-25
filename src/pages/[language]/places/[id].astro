@@ -1,0 +1,16 @@
+---
+import PlaceDetail from '../../../components/PlaceDetail.astro';
+import {placePages} from '../../../lib/catalogue';
+import {placePath} from '../../../lib/format';
+import {locales, type Locale} from '../../../lib/locales';
+import type {Place} from '../../../lib/types';
+
+export function getStaticPaths() {
+  return locales.filter(({id}) => id !== 'en').flatMap(({id:locale}) =>
+    placePages.map(({id,props}) => ({params:{language:locale,id},props:{...props,locale}})));
+}
+interface Props {place: Place; redirectTo?: string; locale: Locale}
+const {place,redirectTo,locale} = Astro.props;
+if (redirectTo) return Astro.redirect(placePath(redirectTo,locale),301);
+---
+<PlaceDetail place={place} locale={locale} />

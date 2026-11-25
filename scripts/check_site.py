@@ -27,8 +27,12 @@ def check():
     for route in ("", "map/", "cities/", "insights/", "about/", "contribute/", "analysis/", "share/", "offline/",
                   "guide/", "leaderboard/", "price-index/", "trails/", "pit-stops/", "missions/", "heritage/", "passport/", "roulette/", "wrapped/", "languages/", "ml/", "hi/", "ta/", "kn/"):
         assert (DIST / route / "index.html").is_file(), route
-    assert all((DIST / "places" / place["id"] / "index.html").is_file() for place in places)
-    assert all((DIST / "cities" / city["id"] / "index.html").is_file() for city in cities)
+    for locale in ("", "ml", "hi", "ta", "kn"):
+        assert (DIST / locale / "cities" / "index.html").is_file(), locale
+        for group, records in (("places", places), ("cities", cities)):
+            for record in records:
+                target = DIST / locale / group / record["id"] / "index.html"
+                assert target.is_file(), target.relative_to(DIST)
     assert all((DIST / "trails" / trail["id"] / "index.html").is_file() for trail in trails)
     for endpoint in ("leaderboard", "place-metrics", "price-index"):
         assert json.loads((DIST / "api/v1" / (endpoint + ".json")).read_text())["schema_version"] == 1
@@ -49,7 +53,7 @@ def check():
             rel = unquote(urlsplit(link).path.removeprefix(BASE))
             target = DIST / rel
             assert target.is_file() or (target / "index.html").is_file(), f"{page.relative_to(DIST)} → {link}"
-    print(f"Checked {len(places)} place pages, {len(cities)} city pages, {len(trails)} trails, public data and internal links")
+    print(f"Checked {len(places)} place pages and {len(cities)} city pages in each of five languages, {len(trails)} trails, public data and internal links")
 
 
 if __name__ == "__main__":

@@ -1,0 +1,14 @@
+---
+import CityDetail from '../../../components/CityDetail.astro';
+import {atlas} from '../../../lib/catalogue';
+import {locales, type Locale} from '../../../lib/locales';
+import type {City} from '../../../lib/types';
+
+export function getStaticPaths() {
+  return locales.filter(({id}) => id !== 'en').flatMap(({id:locale}) =>
+    atlas.cities.map(city => ({params:{language:locale,id:city.id},props:{city,locale}})));
+}
+interface Props {city: City; locale: Locale}
+const {city,locale} = Astro.props;
+---
+<CityDetail city={city} locale={locale} />
