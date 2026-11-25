@@ -1,15 +1,15 @@
 import Fuse from 'fuse.js';
-import {accuracyLabels, formatNumber, formatPrice, locality, openInMap, openInMapName, path, placeCount, placePath} from '../lib/format';
+import {formatMessage, formatNumber, formatPrice, locality, path, placeCount, placePath, providerLabels} from '../lib/format';
+import type {FinderCopy} from '../lib/finder-copy';
 import {browserPosition, distanceKm} from '../lib/distance';
 import {metricMatcher} from '../lib/metric-filters';
 import {track} from './analytics';
 import {mapPreference,rememberMapProvider} from '../lib/map-preference';
-import {isLocale, labelSets} from '../lib/locales';
+import {isLocale, labelSets, type Locale} from '../lib/locales';
 import {placeNameAliases, searchText, translatedPlaceName} from '../lib/place-search';
 import type {Place, PlaceMetrics, Provider} from '../lib/types';
 
 const PAGE_SIZE = 24;
-const km = new Intl.NumberFormat('en-IN', {maximumFractionDigits: 1});
 const districtKey = (p: Place) => p.location.district ? [p.location.district, p.location.state].filter(Boolean).join(' · ') : '';
 
 function make<K extends keyof HTMLElementTagNameMap>(tag: K, text = '', className = '') {
@@ -19,30 +19,42 @@ function make<K extends keyof HTMLElementTagNameMap>(tag: K, text = '', classNam
   return item;
 }
 
-function card(place: Place, provider: Provider, distance: number | null, metric?: PlaceMetrics) {
+function card(place: Place, provider: Provider, distance: number | null,
+  {locale,copy,numbers}: {locale:Locale; copy:FinderCopy; numbers:Intl.NumberFormat}, metric?: PlaceMetrics) {
   const li = make('li', '', 'place-card');
   const name = make('h3');
   const detail = make('a', place.name);
   detail.href = placePath(place.id);
   name.append(detail);
-  li.append(name, make('p', locality(place.location) || 'Location to be confirmed', 'muted'));
-  if (distance !== null) li.append(make('p', distance < .1 ? 'Under 0.1 km away' : km.format(distance) + ' km away'));
+  li.append(name, make('p', locality(place.location,name => translatedPlaceName(name,locale)) || copy.locationPending, 'muted'));
+  if (distance !== null) {
+    li.append(make('p', distance < .1 ? copy.near : formatMessage(copy.away,{distance:numbers.format(Math.round(distance * 10) / 10)})));
+  }
   const tags = make('div', '', 'tags');
-  tags.append(make('span', accuracyLabels[place.location.accuracy], place.location.accuracy === 'estimated' ? 'tag estimate' : 'tag'));
-  if (metric?.score) tags.append(make('span', formatNumber(metric.score.score) + '/100 Puff Score · ' + metric.score.count + (metric.score.count === 1 ? ' review' : ' reviews'), 'tag'));
-  if (metric?.price) tags.append(make('span', formatPrice(metric.price.amount,metric.price.currency) + ' last reported', 'tag'));
+  tags.append(make('span', copy.accuracy[place.location.accuracy], place.location.accuracy === 'estimated' ? 'tag estimate' : 'tag'));
+  if (metric?.score) {
+    const {score,count} = metric.score;
+    tags.append(make('span',formatMessage(count === 1 ? copy.scoreTagSingle : copy.scoreTag,{
+      score:numbers.format(score),count:numbers.format(count),
+    }),'tag'));
+  }
+  if (metric?.price) {
+    const price = formatPrice(metric.price.amount,metric.price.currency,numbers.resolvedOptions().locale);
+    tags.append(make('span',formatMessage(copy.priceTag,{price}),'tag'));
+  }
   li.append(tags);
   const destination = place.map_links[provider];
   if (destination) {
-    const link = make('a', openInMap(provider), 'text-link');
+    const message = {provider:providerLabels[provider],place:place.name};
+    const link = make('a', formatMessage(copy.openMap,message), 'text-link');
     link.href = destination;
     link.target = '_blank';
     link.rel = 'noopener noreferrer';
     link.dataset.directions = provider;
-    link.setAttribute('aria-label', openInMapName(provider,place.name));
+    link.setAttribute('aria-label', formatMessage(copy.openMapAccessible,message));
     li.append(link);
   } else {
-    li.append(make('p', 'Map link unavailable', 'muted'));
+    li.append(make('p', copy.mapUnavailable, 'muted'));
   }
   return li;
 }
@@ -51,8 +63,10 @@ export async function startExplorer() {
   const activeLanguage = document.documentElement.lang;
   const locale = isLocale(activeLanguage) ? activeLanguage : 'en';
   const labels = labelSets[locale];
+  const numbers = new Intl.NumberFormat(locale === 'en' ? 'en-IN' : locale);
   const root = document.querySelector<HTMLElement>('[data-explorer]');
-  if (!root) return;
+  if (!root?.dataset.finderCopy) return;
+  const display = {locale,copy:JSON.parse(root.dataset.finderCopy) as FinderCopy,numbers};
   const find = <T extends HTMLElement>(selector: string) => root.querySelector<T>(selector)!;
   const form = find<HTMLFormElement>('[data-filters]');
   const status = find<HTMLElement>('[data-result-status]');
@@ -144,16 +158,17 @@ export async function startExplorer() {
       : placeCount(distances.length) + (origin ? (Number.isFinite(limit) ? ' within ' + formatNumber(limit) + ' km of ' : ' sorted by distance from ') + origin.label : '');
     if (locale !== 'en') {
       status.textContent = distances.length
-        ? new Intl.NumberFormat(locale).format(distances.length) + ' ' + labels.places
+        ? numbers.format(distances.length) + ' ' + labels.places
         : labels.empty;
     }
     clearTimeout(noResultsTimer);
     if (!distances.length && query) noResultsTimer = setTimeout(() => track({name:'no_results'}),900);
-    results.replaceChildren(...distances.slice(page * PAGE_SIZE,(page + 1)*PAGE_SIZE).map(({place,distance}) => card(place, provider.value as Provider,distance,metrics[place.id])));
+    results.replaceChildren(...distances.slice(page * PAGE_SIZE,(page + 1)*PAGE_SIZE)
+      .map(({place,distance}) => card(place,provider.value as Provider,distance,display,metrics[place.id])));
     pagination.hidden = pages <= 1;
     previous.disabled = page === 0;
     next.disabled = page + 1 === pages;
-    find<HTMLElement>('[data-pages]').textContent = labels.page + ' ' + (page + 1) + ' ' + labels.of + ' ' + pages;
+    find<HTMLElement>('[data-pages]').textContent = labels.page + ' ' + numbers.format(page + 1) + ' ' + labels.of + ' ' + numbers.format(pages);
   }
 
   function setOrigin(value: typeof origin, message = '') {

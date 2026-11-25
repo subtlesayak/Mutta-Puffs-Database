@@ -1,30 +1,33 @@
 ---
 import {atlas} from '../lib/catalogue';
-import {path} from '../lib/format';
-interface Props {collapsible?: boolean}
-const {collapsible = true} = Astro.props;
+import {formatMessage, path} from '../lib/format';
+import {finderCopy} from '../lib/finder-copy';
+import type {Locale} from '../lib/locales';
+interface Props {collapsible?: boolean; locale?: Locale}
+const {collapsible = true,locale = 'en'} = Astro.props;
+const copy = finderCopy[locale];
+const numbers = new Intl.NumberFormat(locale);
 const Wrapper = collapsible ? 'details' : 'fieldset';
 const metrics = Object.values(atlas.place_metrics);
 const currencies = [...new Set(metrics.flatMap(metric => metric.price ? [metric.price.currency] : []))].sort();
 const hasScores = metrics.some(metric => metric.score);
 ---
 <Wrapper class="metric-filters">
-  {collapsible ? <summary>Price and Puff Score</summary> : <legend>Price and Puff Score</legend>}
+  {collapsible ? <summary>{copy.metricTitle}</summary> : <legend>{copy.metricTitle}</legend>}
   {(currencies.length > 0 || hasScores) && <div class="fields">
     {currencies.length > 0 && <>
-      <label class="field">Reported price
-        <select name="price_status"><option value="">Any price status</option><option value="reported">Has a dated price</option></select>
+      <label class="field">{copy.priceStatus}
+        <select name="price_status"><option value="">{copy.anyPrice}</option><option value="reported">{copy.hasPrice}</option></select>
       </label>
-      <label class="field">Currency <select name="currency"><option value="">Any currency</option>{currencies.map(currency => <option>{currency}</option>)}</select></label>
-      <label class="field">Maximum price <input name="max_price" type="number" inputmode="decimal" min="0" step="any" placeholder="Choose a currency first" disabled /></label>
+      <label class="field">{copy.currency} <select name="currency"><option value="">{copy.anyCurrency}</option>{currencies.map(currency => <option>{currency}</option>)}</select></label>
+      <label class="field">{copy.maxPrice} <input name="max_price" type="number" inputmode="decimal" min="0" step="any" placeholder={copy.currencyHint} disabled /></label>
     </>}
-    {hasScores && <label class="field">Puff Score <select name="min_score"><option value="">Any score status</option><option value="1">Has an approved score</option>{[60,70,80,90].map(score => <option value={score}>{score}+ out of 100</option>)}</select></label>}
+    {hasScores && <label class="field">{copy.score} <select name="min_score"><option value="">{copy.anyScore}</option><option value="1">{copy.hasScore}</option>{[60,70,80,90].map(score => <option value={score}>{formatMessage(copy.scoreThreshold,{score:numbers.format(score)})}</option>)}</select></label>}
   </div>}
   {currencies.length > 0 && hasScores
-    ? <p class="muted">Filters use the latest approved price and the weighted average of approved reviews.</p>
+    ? <p class="muted">{copy.metricsHelp}</p>
     : <p class="muted">
-        {currencies.length === 0 && !hasScores ? 'The atlas is waiting for its first approved prices and reviews.' :
-          currencies.length === 0 ? 'The atlas is waiting for its first approved prices.' : 'The atlas is waiting for its first approved reviews.'}
-        {' '}<a href={path('contribute/?kind=' + (currencies.length === 0 ? 'observation' : 'review'))}>Share a first-hand report</a>
+        {currencies.length === 0 && !hasScores ? copy.awaitingBoth : currencies.length === 0 ? copy.awaitingPrice : copy.awaitingReviews}
+        {' '}<a href={path('contribute/?kind=' + (currencies.length === 0 ? 'observation' : 'review'))} hreflang="en">{copy.report}</a>
       </p>}
 </Wrapper>

@@ -1,14 +1,23 @@
 ---
-import {accuracyLabels, locality, openInMap, openInMapName, placePath} from '../lib/format';
+import {formatMessage, locality, placePath, providerLabels} from '../lib/format';
+import {finderCopy} from '../lib/finder-copy';
+import type {Locale} from '../lib/locales';
+import {translatedPlaceName} from '../lib/place-search';
 import type {Place, Provider} from '../lib/types';
 
-interface Props {place: Place}
-const {place} = Astro.props;
+interface Props {place: Place; locale?: Locale}
+const {place,locale = 'en'} = Astro.props;
+const copy = finderCopy[locale];
 const provider = Object.keys(place.map_links)[0] as Provider | undefined;
+const message = {provider:provider ? providerLabels[provider] : '', place:place.name};
 ---
 <li class="place-card">
   <h3><a href={placePath(place.id)}>{place.name}</a></h3>
-  <p class="muted">{locality(place.location) || 'Location to be confirmed'}</p>
-  <div class="tags"><span class:list={['tag', {estimate: place.location.accuracy === 'estimated'}]}>{accuracyLabels[place.location.accuracy]}</span></div>
-  {provider && <a class="text-link" data-provider-links={JSON.stringify(place.map_links)} data-place-label={place.name} data-directions={provider} href={place.map_links[provider]} target="_blank" rel="noopener noreferrer" aria-label={openInMapName(provider,place.name)}>{openInMap(provider)}</a>}
+  <p class="muted">{locality(place.location,name => translatedPlaceName(name,locale)) || copy.locationPending}</p>
+  <div class="tags"><span class:list={['tag', {estimate: place.location.accuracy === 'estimated'}]}>{copy.accuracy[place.location.accuracy]}</span></div>
+  {provider && <a class="text-link" data-provider-links={JSON.stringify(place.map_links)} data-place-label={place.name}
+    data-map-action={locale === 'en' ? undefined : copy.openMap}
+    data-map-description={locale === 'en' ? undefined : copy.openMapAccessible} data-directions={provider}
+    href={place.map_links[provider]} target="_blank" rel="noopener noreferrer"
+    aria-label={formatMessage(copy.openMapAccessible,message)}>{formatMessage(copy.openMap,message)}</a>}
 </li>

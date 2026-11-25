@@ -8,11 +8,12 @@ import {atlas} from '../lib/catalogue';
 import SiteNavigation from '../components/SiteNavigation.astro';
 import {github, path, siteUrl} from '../lib/format';
 import {guideDestinations} from '../lib/navigation';
-import {labelSets, type Locale} from '../lib/locales';
+import {labelSets, locales, type Locale} from '../lib/locales';
 
 interface Props {title: string; description: string; section?: string; noindex?: boolean; locale?: Locale}
 const {title, description, section, noindex = false, locale = 'en'} = Astro.props;
 const labels = labelSets[locale];
+const home = path(locale === 'en' ? '' : locale + '/');
 const fullTitle = section === 'Explore' && locale === 'en' ? 'Mutta Puffs Everywhere · The egg puff atlas' : title + ' · Mutta Puffs Everywhere';
 const canonical = new URL(Astro.url.pathname, siteUrl.origin);
 const activeSection = section ?? (guideDestinations.some(({route}) => canonical.pathname.startsWith(path(route))) ? 'Puff Guide' : undefined);
@@ -25,6 +26,8 @@ const activeSection = section ?? (guideDestinations.some(({route}) => canonical.
     <title>{fullTitle}</title>
     <meta name="description" content={description} />
     {noindex ? <meta name="robots" content="noindex" /> : <link rel="canonical" href={canonical} />}
+    {section === 'Explore' && locales.map(language => <link rel="alternate" hreflang={language.id}
+      href={new URL(path(language.id === 'en' ? '' : language.id + '/'),siteUrl.origin)} />)}
     <meta property="og:site_name" content="Mutta Puffs Everywhere" />
     <meta property="og:title" content={fullTitle} />
     <meta property="og:description" content={description} />
@@ -40,7 +43,7 @@ const activeSection = section ?? (guideDestinations.some(({route}) => canonical.
     <a class="skip" href="#main">{labels.skip}</a>
     <header class="masthead">
       <div class="shell header-inner">
-        <a href={path()} class="wordmark"><span class="brand-icon"><Icon name="puff" size={24} /></span><span>Mutta Puffs<small>Everywhere</small></span></a>
+        <a href={home} class="wordmark"><span class="brand-icon"><Icon name="puff" size={24} /></span><span>Mutta Puffs<small>Everywhere</small></span></a>
         <SiteNavigation variant="desktop" pathname={canonical.pathname} activeSection={activeSection} locale={locale} />
         <details class="mobile-menu">
           <summary class="button secondary small"><Icon name="menu" size={19} /> {labels.menu}</summary>
@@ -51,8 +54,8 @@ const activeSection = section ?? (guideDestinations.some(({route}) => canonical.
     <main id="main" tabindex="-1"><slot /></main>
     <footer class="site-footer">
       <div class="shell footer-inner">
-        <div><a class="footer-brand" href={path()}>Mutta Puffs Everywhere</a><p>A community atlas for one very good snack.</p></div>
-        <nav aria-label="Project">
+        <div><a class="footer-brand" href={home}>Mutta Puffs Everywhere</a><p>{labels.footerIntro}</p></div>
+        <nav aria-label={labels.projectNav}>
           <a href={path('about/')}>{labels.about}</a>
           <a href={path('about/#data')}>{labels.data}</a>
           <a href={github}>GitHub</a>

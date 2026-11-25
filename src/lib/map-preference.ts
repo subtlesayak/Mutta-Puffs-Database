@@ -1,4 +1,4 @@
-import {openInMap,openInMapName,providerLabels} from './format';
+import {formatMessage,openInMap,openInMapName,providerLabels} from './format';
 import type {Provider} from './types';
 
 const key = 'mutta-puffs-map-provider';
@@ -24,8 +24,9 @@ export function applyMapPreference() {
     const destination = destinations[preferred];
     if (!destination) continue;
     link.href = destination;
-    link.textContent = openInMap(preferred);
+    const message = {provider:providerLabels[preferred],place:link.dataset.placeLabel ?? 'this place'};
+    link.textContent = link.dataset.mapAction ? formatMessage(link.dataset.mapAction,message) : openInMap(preferred);
     link.dataset.directions = preferred;
-    link.setAttribute('aria-label',openInMapName(preferred,link.dataset.placeLabel ?? 'this place'));
+    link.setAttribute('aria-label',link.dataset.mapDescription ? formatMessage(link.dataset.mapDescription,message) : openInMapName(preferred,message.place));
   }
 }
