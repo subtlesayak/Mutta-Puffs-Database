@@ -29,6 +29,7 @@ def check():
         assert (DIST / route / "index.html").is_file(), route
     for locale in ("", "ml", "hi", "ta", "kn"):
         assert (DIST / locale / "cities" / "index.html").is_file(), locale
+        assert (DIST / locale / "map" / "index.html").is_file(), locale
         for group, records in (("places", places), ("cities", cities)):
             for record in records:
                 target = DIST / locale / group / record["id"] / "index.html"

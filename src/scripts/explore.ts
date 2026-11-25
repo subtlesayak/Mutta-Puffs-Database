@@ -1,12 +1,12 @@
 import Fuse from 'fuse.js';
-import {formatMessage, formatNumber, formatPrice, locality, path, placeCount, placePath, providerLabels} from '../lib/format';
+import {formatMessage, formatNumber, formatPrice, localizedPath, locality, path, placeCount, placePath, providerLabels} from '../lib/format';
 import type {FinderCopy} from '../lib/finder-copy';
 import {browserPosition, distanceKm} from '../lib/distance';
-import {metricMatcher} from '../lib/metric-filters';
+import {metricControls, metricMatcher} from '../lib/metric-filters';
 import {track} from './analytics';
 import {mapPreference,rememberMapProvider} from '../lib/map-preference';
 import {isLocale, labelSets, type Locale} from '../lib/locales';
-import {placeNameAliases, searchText, translatedPlaceName} from '../lib/place-search';
+import {placeNameAliases, searchText, translatedDistrict, translatedPlaceName} from '../lib/place-search';
 import type {Place, PlaceMetrics, Provider} from '../lib/types';
 
 const PAGE_SIZE = 24;
@@ -112,10 +112,7 @@ export async function startExplorer() {
     const entries = places.filter(p => p.location.country === 'India' &&
       (!region.value || region.value === 'India' || p.location.state === region.value));
     const values = [...new Set(entries.map(districtKey).filter(Boolean))].sort();
-    district.replaceChildren(new Option(labels.allDistricts,''), ...values.map(name => {
-      const display = name.split(' · ').map(part => translatedPlaceName(part,locale)).join(' · ');
-      return new Option(display,name);
-    }));
+    district.replaceChildren(new Option(labels.allDistricts,''), ...values.map(name => new Option(translatedDistrict(name,locale),name)));
     if (entries.some(p => !p.location.district)) district.add(new Option(labels.unassignedDistrict,'unassigned'));
     district.disabled = !entries.length;
     if ([...district.options].some(option => option.value === selected)) district.value = selected;
@@ -125,15 +122,19 @@ export async function startExplorer() {
   let request = 0;
   let origin: {coords: [number, number]; label: string} | null = null;
   let noResultsTimer: ReturnType<typeof setTimeout> | undefined;
+  const metricFields = metricControls(form);
   function render() {
     const query = searchText(search.value);
+    const matchesMetric = metricMatcher(form);
     const mapParams = new URLSearchParams();
     if (city.value) mapParams.set('city', city.value);
     if (region.value && region.value !== 'unassigned') mapParams.set('region', region.value);
     if (district.value && district.value !== 'unassigned') mapParams.set('district', district.value);
-    mapView.href = path('map/' + (mapParams.size ? '?' + mapParams : ''));
+    for (const filter of [verification,...metricFields]) {
+      if (!filter.disabled && filter.value && filter.validity.valid) mapParams.set(filter.name,filter.value);
+    }
+    mapView.href = localizedPath('map/' + (mapParams.size ? '?' + mapParams : ''),locale);
     const matching = query ? index.search(query).map(hit => hit.item.place) : places;
-    const matchesMetric = metricMatcher(form);
     const filtered = matching.filter(p =>
       (!region.value || p.location.state === region.value || p.location.country === region.value || (region.value === 'unassigned' && !p.location.country)) &&
       (!district.value || districtKey(p) === district.value || (district.value === 'unassigned' && p.location.country === 'India' && !p.location.district)) &&

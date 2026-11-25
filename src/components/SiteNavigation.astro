@@ -15,7 +15,7 @@ const {variant, pathname, activeSection, locale, languageHref} = Astro.props;
 const labels = labelSets[locale];
 const links = [
   ['Explore', localizedPath('',locale), labels.explore, locale],
-  ['Puff Map', path('map/'), labels.map, 'en'],
+  ['Puff Map', localizedPath('map/',locale), labels.map, locale],
   ['Cities', localizedPath('cities/',locale), labels.cities, locale],
   ['Puff Guide', path('guide/'), labels.guide, 'en'],
   ['Insights', path('insights/'), labels.insights, 'en'],

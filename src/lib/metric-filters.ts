@@ -1,5 +1,8 @@
 import type {PlaceMetrics} from './types';
 
+export const metricControls = (form: HTMLFormElement) =>
+  [...form.querySelectorAll<HTMLSelectElement | HTMLInputElement>('[name=price_status],[name=currency],[name=max_price],[name=min_score]')];
+
 export function metricMatcher(form: HTMLFormElement) {
   const currency = form.querySelector<HTMLSelectElement>('[name=currency]')?.value || '';
   const maximum = form.querySelector<HTMLInputElement>('[name=max_price]');
@@ -11,7 +14,7 @@ export function metricMatcher(form: HTMLFormElement) {
     const {price, score} = metric ?? {};
     return (!priceRequired || !!price) &&
       (!currency || price?.currency === currency) &&
-      (typeof priceLimit !== 'number' || Number.isNaN(priceLimit) || (price?.amount ?? Infinity) <= priceLimit) &&
+      (typeof priceLimit !== 'number' || Number.isNaN(priceLimit) || priceLimit < 0 || (price?.amount ?? Infinity) <= priceLimit) &&
       (!minScore || (score?.score ?? 0) >= minScore);
   };
 }

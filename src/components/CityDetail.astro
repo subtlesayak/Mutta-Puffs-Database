@@ -5,7 +5,7 @@ import PlaceCard from './PlaceCard.astro';
 import {byId} from '../lib/catalogue';
 import type {City} from '../lib/types';
 import type {Locale} from '../lib/locales';
-import {formatMessage, localizedPath, path} from '../lib/format';
+import {formatMessage, localizedPath} from '../lib/format';
 import {directoryCopy, directoryCount} from '../lib/directory-copy';
 import {translatedPlaceName} from '../lib/place-search';
 
@@ -25,7 +25,7 @@ const title = formatMessage(copy.cityHeading,fields);
       <h1>{title}</h1>
       <p>{fields.count} · {location || copy.cityDirectory}</p>
       <div class="actions city-actions">
-        <a class="button" href={path('map/?city=' + city.id)} hreflang="en"><Icon name="map" size={18} /> {copy.cityMap}</a>
+        <a class="button" href={localizedPath('map/?city=' + city.id,locale)}><Icon name="map" size={18} /> {copy.cityMap}</a>
         {city.centre && <a class="button secondary" href={localizedPath('?city=' + city.id + '#nearby',locale)}><Icon name="location" size={18} /> {formatMessage(copy.searchCity,fields)}</a>}
       </div>
     </header>

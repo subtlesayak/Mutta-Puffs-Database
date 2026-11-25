@@ -1,8 +1,11 @@
 import type {GeoJSONSource, MapGeoJSONFeature} from 'maplibre-gl';
 import type {Feature, FeatureCollection, Point} from 'geojson';
-import {accuracyLabels, path, placeCount, placePath} from '../lib/format';
-import {metricMatcher} from '../lib/metric-filters';
+import {formatMessage, path, placePath} from '../lib/format';
+import {metricControls, metricMatcher} from '../lib/metric-filters';
 import {pagePlaceAliases, resolvePlaceId} from '../lib/place-identity';
+import {isLocale} from '../lib/locales';
+import {translatedDistrict, translatedPlaceName} from '../lib/place-search';
+import type {MapRuntimeCopy} from '../lib/map-copy';
 import type {Accuracy, City, PlaceMetrics, Trail} from '../lib/types';
 import type {openGoogleMap} from './google-map';
 
@@ -26,7 +29,14 @@ async function loadBasemap(): Promise<FeatureCollection | string> {
 
 export async function startMap() {
   const root = document.querySelector<HTMLElement>('[data-atlas-map]');
-  if (!root) return;
+  if (!root?.dataset.mapCopy) return;
+  const language = document.documentElement.lang;
+  const locale = isLocale(language) ? language : 'en';
+  const copy = JSON.parse(root.dataset.mapCopy) as MapRuntimeCopy;
+  const localName = (name: string) => translatedPlaceName(name,locale);
+  const numbers = new Intl.NumberFormat(locale === 'en' ? 'en-IN' : locale);
+  const plurals = new Intl.PluralRules(locale);
+  const languageLinks = document.querySelectorAll<HTMLAnchorElement>('#page-languages a');
   const canvas = root.querySelector<HTMLElement>('[data-map-canvas]')!;
   const frame = root.querySelector<HTMLElement>('[data-map-frame]')!;
   const list = root.querySelector<HTMLUListElement>('[data-map-list]')!;
@@ -56,6 +66,7 @@ export async function startMap() {
   const params = new URLSearchParams(location.search);
   const urlPlace = resolvePlaceId(params.get('place') ?? '', pagePlaceAliases());
   const linkedFilters = [city, region, district, trail, verification, accuracy, view];
+  const metricFields = metricControls(form);
   let maplibregl: typeof import('maplibre-gl') | undefined;
   let map: import('maplibre-gl').Map | undefined;
   let initializing = false;
@@ -70,7 +81,7 @@ export async function startMap() {
     if (responses.some(response => !response.ok)) throw new Error('Map data unavailable');
     [pins, {cities}, {trails}] = await Promise.all(responses.map(response => response.json()));
   } catch {
-    status.textContent = 'Could not load the interactive directory. Browse the saved places below.';
+    status.textContent = copy.loadError;
     frame.hidden = true;
     form.hidden = true;
     const index = document.querySelector<HTMLDetailsElement>('.map-index');
@@ -81,8 +92,7 @@ export async function startMap() {
   void fetch(path('api/v1/place-metrics.json')).then(async response => {
     if (!response.ok) return;
     ({place_metrics:metrics} = await response.json());
-    if (form.querySelector<HTMLInputElement>('[name=min_score]')?.value ||
-        form.querySelector<HTMLInputElement>('[name=price_status]')?.value) update();
+    if (metricFields.some(field => field.value)) update();
   }).catch(() => {});
 
   const marks = new Map(pins.features.map(feature => [feature.properties.id,feature]));
@@ -91,12 +101,12 @@ export async function startMap() {
     if (fly && activeRenderer !== 'google' && map) map.easeTo({center,zoom:Math.max(11,map.getZoom()),duration:motion});
     const a = document.createElement('a');
     a.textContent = feature.properties.name;
-    a.href = placePath(feature.properties.id);
+    a.href = placePath(feature.properties.id,locale);
     const detail = document.createElement('p');
-    detail.append(a, document.createTextNode(' · ' + accuracyLabels[feature.properties.accuracy]));
+    detail.append(a, document.createTextNode(' · ' + copy.accuracy[feature.properties.accuracy]));
     selection.replaceChildren(detail);
     const popup = document.createElement('div');
-    popup.append(a.cloneNode(true),document.createElement('br'),document.createTextNode(accuracyLabels[feature.properties.accuracy]));
+    popup.append(a.cloneNode(true),document.createElement('br'),document.createTextNode(copy.accuracy[feature.properties.accuracy]));
     if (activeRenderer === 'google') {
       googleView?.focus(feature,popup,fly);
     } else if (map && maplibregl) {
@@ -109,11 +119,20 @@ export async function startMap() {
   let currentPopup: import('maplibre-gl').Popup | null = null;
   const saveView = () => {
     const url = new URL(location.href);
-    for (const {name,value} of [...linkedFilters, place]) {
-      if (value && !(name === 'view' && value === 'map')) url.searchParams.set(name,value);
-      else url.searchParams.delete(name);
+    const translatedParams = new URLSearchParams();
+    for (const field of [...linkedFilters,place,...metricFields]) {
+      const {name,value} = field;
+      if (value && field.validity.valid && !(field.disabled && metricFields.includes(field)) && !(name === 'view' && value === 'map')) {
+        url.searchParams.set(name,value);
+        translatedParams.set(name,value);
+      } else url.searchParams.delete(name);
     }
     history.replaceState(null,'',url);
+    for (const link of languageLinks) {
+      const destination = new URL(link.href);
+      destination.search = translatedParams.toString();
+      link.href = destination.href;
+    }
   };
   const update = () => {
     const selected = cities.find(item => item.id === city.value);
@@ -121,10 +140,8 @@ export async function startMap() {
     const route = trails.find(item => item.id === trail.value);
     const stops = route ? new Set(route.place_ids) : null;
     const matchesMetric = metricMatcher(form);
-    const active = [...form.querySelectorAll<HTMLSelectElement | HTMLInputElement>(
-      '[name=region],[name=district],[name=trail],[name=accuracy],[name=verification],[name=price_status],[name=currency],[name=max_price],[name=min_score]',
-    )].filter(control => !control.disabled && control.value).length;
-    filterCount.textContent = active ? ' · ' + active + ' active' : '';
+    const active = [region,district,trail,accuracy,verification,...metricFields].filter(control => !control.disabled && control.value).length;
+    filterCount.textContent = active ? formatMessage(copy.active,{count:numbers.format(active)}) : '';
     const points = pins.features.filter(({properties: pin}) =>
       (!allowed || allowed.has(pin.id)) && (!stops || stops.has(pin.id)) &&
       (!region.value || [pin.state,pin.country].includes(region.value)) &&
@@ -139,8 +156,8 @@ export async function startMap() {
       (map.getSource('density') as GeoJSONSource).setData(data);
     }
     const current = place.value;
-    place.replaceChildren(new Option('Choose a place',''), ...points.slice().sort((a,b)=>a.properties.name.localeCompare(b.properties.name))
-      .map(p => new Option(p.properties.name + (p.properties.city ? ' · ' + p.properties.city : ''),p.properties.id)));
+    place.replaceChildren(new Option(copy.choosePlace,''), ...points.slice().sort((a,b)=>a.properties.name.localeCompare(b.properties.name))
+      .map(p => new Option(p.properties.name + (p.properties.city ? ' · ' + localName(p.properties.city) : ''),p.properties.id)));
     if (points.some(p=>p.properties.id === current)) place.value = current;
     const showList = view.value === 'list';
     streetAttribution.hidden = showList || activeRenderer !== 'street';
@@ -149,19 +166,20 @@ export async function startMap() {
     density.disabled = !interactive || showList || activeRenderer === 'google';
     place.disabled = !interactive || showList;
     if (renderer) renderer.disabled = !interactive || showList;
-    const count = points.length ? placeCount(points.length) + (showList ? ' in the list.' : ' on the map.') : 'No places match. Clear filters or choose another area.';
-    status.textContent = mapUnavailable ? count + ' The interactive map is unavailable on this device.' :
-      !showList && !interactive ? 'Loading the atlas map…' : count;
+    const noun = plurals.select(points.length) === 'one' ? copy.placeOne : copy.placeMany;
+    const places = numbers.format(points.length) + ' ' + noun;
+    const count = points.length ? formatMessage(showList ? copy.listCount : copy.mapCount,{places}) : copy.empty;
+    status.textContent = mapUnavailable ? count + ' ' + copy.unavailable : !showList && !interactive ? copy.loading : count;
     if (showList) {
       list.replaceChildren(...points.map(({properties:pin}) => {
         const li = document.createElement('li');
         li.className = 'place-card';
         const link = document.createElement('a');
-        link.href = placePath(pin.id);
+        link.href = placePath(pin.id,locale);
         link.textContent = pin.name;
         const note = document.createElement('p');
         note.className = 'muted';
-        note.textContent = [pin.city, accuracyLabels[pin.accuracy]].filter(Boolean).join(' · ');
+        note.textContent = [pin.city && localName(pin.city), copy.accuracy[pin.accuracy]].filter(Boolean).join(' · ');
         li.append(link,note);
         return li;
       }));
@@ -201,10 +219,10 @@ export async function startMap() {
     if (renderer.value !== 'google') {showAtlas('',renderer.value === 'street' ? 'street' : 'atlas'); return;}
     if (!googleCanvas || !root?.dataset.googleKey || !root.dataset.googleId) {showAtlas(); return;}
     const request = ++rendererRequest;
-    const failure = 'Google Maps could not load. The atlas map is available.';
-    status.textContent = 'Loading Google Maps…';
+    const failure = copy.googleFailure;
+    status.textContent = copy.googleLoading;
     try {
-      const config = {key:root.dataset.googleKey,mapId:root.dataset.googleId};
+      const config = {key:root.dataset.googleKey,mapId:root.dataset.googleId,language:locale};
       googlePending ??= import('./google-map').then(module =>
         module.openGoogleMap<Pin>(googleCanvas,config,point => lookAt(point,false),() => {
           if (renderer.value === 'google') showAtlas(failure);
@@ -234,7 +252,7 @@ export async function startMap() {
     const options = new Set(pins.features.filter(({properties: pin}) =>
       (!allowed || allowed.has(pin.id)) && (!region.value || [pin.state,pin.country].includes(region.value)))
       .map(({properties: pin}) => pin.district ? [pin.district,pin.state].filter(Boolean).join(' · ') : '').filter(Boolean));
-    district.replaceChildren(new Option('All districts',''), ...[...options].sort().map(name => new Option(name)));
+    district.replaceChildren(new Option(copy.allDistricts,''), ...[...options].sort().map(name => new Option(translatedDistrict(name,locale),name)));
     district.disabled = options.size === 0;
     if (options.has(current)) district.value = current;
   }
@@ -263,6 +281,13 @@ export async function startMap() {
       update();
     });
   }
+  for (const field of metricFields) {
+    const incoming = params.get(field.name);
+    if (!incoming) continue;
+    field.value = incoming;
+    if (!field.validity.valid) field.value = '';
+  }
+  place.value = urlPlace;
   updateDistrictOptions();
   form.querySelector('.metric-filters')?.addEventListener('input',update);
   form.addEventListener('submit',event => event.preventDefault());
@@ -300,6 +325,14 @@ export async function startMap() {
       library.setWorkerUrl(worker.default);
       map = new library.Map({
         container: canvas, attributionControl: false, center: [75.8,11], zoom: 4.5, minZoom: 1, maxZoom: 19,
+        locale: {
+          'Map.Title':copy.atlasCanvas,
+          'NavigationControl.ZoomIn':copy.controls.zoomIn,
+          'NavigationControl.ZoomOut':copy.controls.zoomOut,
+          'GeolocateControl.FindMyLocation':copy.controls.locate,
+          'GeolocateControl.LocationNotAvailable':copy.controls.locationUnavailable,
+          'Popup.Close':copy.controls.close,
+        },
         style: {version: 8, sources: {
           land: {type: 'geojson', data: outline, attribution: 'Natural Earth'},
           streets: {
@@ -340,7 +373,7 @@ export async function startMap() {
       atlasMap.on('error', event => {
         // A tile provider can fail independently of the atlas data and offline basemap.
         if (activeRenderer === 'street' && 'sourceId' in event && event.sourceId === 'streets') {
-          showAtlas('Street tiles are unavailable. Showing the offline atlas.');
+          showAtlas(copy.streetFailure);
         } else if (!interactive && !atlasMap.isStyleLoaded()) useListFallback();
         console.warn('Atlas map:', event.error.message);
       });
@@ -349,8 +382,8 @@ export async function startMap() {
         mapUnavailable = false;
         view.disabled = false;
         update();
-        const initial = urlPlace && marks.get(urlPlace);
-        if (initial && view.value !== 'list' && [...place.options].some(option => option.value === urlPlace)) lookAt(initial);
+        const initial = marks.get(place.value);
+        if (initial && view.value !== 'list') lookAt(initial);
       });
       density.addEventListener('change',() => {
         pinsKey.hidden = density.checked;
