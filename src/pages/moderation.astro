@@ -48,7 +48,7 @@ import {communityConfigured} from '../lib/community';
     let next: string | null = null;
     const choices: Partial<Record<ModeratedSubmission['status'], [ModeratedSubmission['status'],string][]>> = {
       pending:[['approved','Approve for publication'],['rejected','Decline']],
-      approved:[['published','Mark published'],['pending','Return to queue']],
+      approved:[['published','Verify publication'],['pending','Return to queue']],
       rejected:[['pending','Return to queue']],
     };
 
@@ -101,13 +101,14 @@ import {communityConfigured} from '../lib/community';
         const note = field('Moderation note','Shown to the contributor');
         note.input.maxLength = 500;
         article.append(note.wrapper);
-        const reference = item.status === 'approved' ? field('Published issue or PR','https://github.com/…') : null;
+        const reference = item.status === 'approved' ? field('GitHub source in the live atlas','https://github.com/…') : null;
         if (reference) {reference.input.type = 'url'; article.append(reference.wrapper);}
         for (const [decision,label] of choices[item.status]!) {
           const button = node('button',label,'button secondary small');
           button.type = 'button';
           button.addEventListener('click', async () => {
             for (const control of actions.querySelectorAll('button')) control.disabled = true;
+            if (decision === 'published') status.textContent = 'Checking the live atlas…';
             try {
               await communityRequest('v1/moderation/submissions/' + item.id, {
                 token:key.value,method:'PATCH',body:{status:decision,reason:note.input.value,reference:reference?.input.value},
