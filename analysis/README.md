@@ -2,19 +2,19 @@
 
 [Find nearby places and filter by district](https://subtlesayak.github.io/Mutta-Puffs-Database/#nearby) · [Place directory](PLACES.md) · [Analysis CSV](places.csv) · [Summary JSON](summary.json)
 
-- **149** source rows, **148** Maps links, and **9** contributor notes
-- **147** links with usable coordinates, including **4** direct pins
+- **152** source rows, **151** Maps links, and **11** contributor notes
+- **150** links with usable coordinates, including **4** direct pins
 - **0** repeated map targets and **3** repeated listing-title groups
 
 ### Country coverage
 
 | Group | Entries |
 | --- | ---: |
-| India | 140 |
+| India | 142 |
+| United Arab Emirates | 2 |
 | United Kingdom | 2 |
 | Oman | 1 |
 | Saudi Arabia | 1 |
-| United Arab Emirates | 1 |
 
 ### Coverage in India
 
@@ -24,9 +24,9 @@
 | Tamil Nadu | 26 |
 | Karnataka | 22 |
 | Maharashtra | 4 |
+| Telangana | 3 |
 | Haryana | 1 |
 | Puducherry | 1 |
-| Telangana | 1 |
 
 ### Approximate district coverage
 
@@ -48,6 +48,7 @@
 | Kannur · Kerala | 3 |
 | Wayanad · Kerala | 3 |
 | Chengalputtu · Tamil Nadu | 2 |
+| Hydrabad · Telangana | 2 |
 | Pathanamthitta · Kerala | 2 |
 | Pune · Maharashtra | 2 |
 | Dakshina Kannada · Karnataka | 1 |
@@ -69,8 +70,8 @@
 
 | Group | Entries |
 | --- | ---: |
-| Bakery or confectionery | 106 |
-| Tea or café | 11 |
+| Bakery or confectionery | 108 |
+| Tea or café | 12 |
 | Unclassified listing | 8 |
 | Landmark or institution | 7 |
 | Store, market or dairy | 7 |

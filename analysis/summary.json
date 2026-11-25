@@ -1,23 +1,23 @@
 {
-  "rows": 149,
-  "linked": 148,
-  "mappable": 147,
-  "notes": 9,
+  "rows": 152,
+  "linked": 151,
+  "mappable": 150,
+  "notes": 11,
   "countries": {
-    "India": 140,
+    "India": 142,
+    "United Arab Emirates": 2,
     "United Kingdom": 2,
     "Oman": 1,
-    "Saudi Arabia": 1,
-    "United Arab Emirates": 1
+    "Saudi Arabia": 1
   },
   "india_states": {
     "Kerala": 85,
     "Tamil Nadu": 26,
     "Karnataka": 22,
     "Maharashtra": 4,
+    "Telangana": 3,
     "Haryana": 1,
-    "Puducherry": 1,
-    "Telangana": 1
+    "Puducherry": 1
   },
   "india_districts": {
     "Kozhikode · Kerala": 21,
@@ -36,6 +36,7 @@
     "Kannur · Kerala": 3,
     "Wayanad · Kerala": 3,
     "Chengalputtu · Tamil Nadu": 2,
+    "Hydrabad · Telangana": 2,
     "Pathanamthitta · Kerala": 2,
     "Pune · Maharashtra": 2,
     "Dakshina Kannada · Karnataka": 1,
@@ -68,14 +69,14 @@
     "Malappuram": 4,
     "Alappuzha": 3,
     "Coimbatore": 3,
+    "Hyderabad": 3,
+    "Dubai": 2,
     "Kannur": 2,
     "Liverpool": 2,
     "Mumbai": 2,
     "Pala": 2,
     "Pune": 2,
-    "Dubai": 1,
     "Gurugram": 1,
-    "Hyderabad": 1,
     "Mangaluru": 1,
     "Mysuru": 1,
     "Riyadh": 1,
@@ -84,8 +85,8 @@
     "Udupi": 1
   },
   "place_types": {
-    "Bakery or confectionery": 106,
-    "Tea or café": 11,
+    "Bakery or confectionery": 108,
+    "Tea or café": 12,
     "Unclassified listing": 8,
     "Landmark or institution": 7,
     "Store, market or dairy": 7,
@@ -94,17 +95,17 @@
     "Unlinked entry": 1
   },
   "link_types": {
-    "Maps listing": 144,
+    "Maps listing": 147,
     "Coordinate pin": 4,
     "No link": 1
   },
   "coordinate_sources": {
-    "Estimated from link": 143,
+    "Estimated from link": 146,
     "Explicit pin": 4,
     "Unavailable": 2
   },
   "geography_methods": {
-    "Inside boundary": 140,
+    "Inside boundary": 143,
     "Near boundary": 5,
     "Country unassigned": 2,
     "No usable position": 2
@@ -122,24 +123,24 @@
     "Whole egg": 1
   },
   "filled_fields": {
-    "Title": 148,
-    "Note": 9,
-    "URL": 148,
+    "Title": 151,
+    "Note": 11,
+    "URL": 151,
     "Tags": 1,
     "Comment": 0
   },
   "repeated_titles": {
     "jaya bakery": [
-      116,
-      145
+      119,
+      148
     ],
     "malabar bites": [
-      92,
-      96
+      95,
+      99
     ],
     "oven fresh bakery": [
-      142,
-      143
+      145,
+      146
     ]
   },
   "repeated_targets": {},

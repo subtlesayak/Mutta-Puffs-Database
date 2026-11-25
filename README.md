@@ -20,9 +20,9 @@ Android Edge may add a home-screen shortcut without registering a share target. 
 
 ## Data
 
-The atlas currently covers **149 places in 5 countries**, with **25 city directories**. Of the 147 places with coordinates, 143 are estimates from saved links and 4 are original dropped pins. Two listings still need coordinates. [Live coverage and downloads](https://subtlesayak.github.io/Mutta-Puffs-Database/about/#data)
+The atlas currently covers **152 places in 5 countries**, with **25 city directories**. Of the 150 places with coordinates, 146 are estimates from saved links and 4 are original dropped pins. Two listings still need coordinates. [Live coverage and downloads](https://subtlesayak.github.io/Mutta-Puffs-Database/about/#data)
 
-[Download the original CSV](data/mutta-puffs-everywhere.csv). It contains 149 rows, including 148 entries with Maps links and one tag-only entry (`Nive backery`). The original titles, notes, URLs, tags, comments, and row order are preserved. Four links point directly to coordinates. Places with the same name and different links have their own rows.
+[Download the latest Maps export](data/mutta-puffs-everywhere.csv). It contains 152 rows, including 151 entries with Maps links and one tag-only entry (`Nive backery`). The original titles, notes, URLs, tags, comments, and row order are preserved. Four links point directly to coordinates. Places with the same name and different links have their own rows.
 
 | Column | Contents |
 | --- | --- |
@@ -40,7 +40,7 @@ The atlas currently covers **149 places in 5 countries**, with **25 city directo
 - [Analysis CSV](analysis/places.csv) with the source fields, source row numbers, and derived fields for each entry
 - [Summary JSON](analysis/summary.json) with the counts, coverage gaps, and duplicate checks
 
-![The mutta puff trail. Of 149 rows, 147 have usable coordinates and 9 have notes. The list covers 5 countries. Kerala has 85 of the 140 entries assigned to India, followed by Tamil Nadu with 26 and Karnataka with 22.](visuals/mutta-puff-trail.png)
+![The mutta puff trail. Of 152 rows, 150 have usable coordinates and 11 have notes. The list covers 5 countries. Kerala has 85 of the 142 entries assigned to India, followed by Tamil Nadu with 26 and Karnataka with 22.](visuals/mutta-puff-trail.png)
 
 ## Analysis method
 

@@ -18,13 +18,13 @@ const files = [
       <p>Contributors have saved {formatNumber(stats.places)} places across {formatNumber(Object.keys(stats.countries).length)} countries. Browse {formatNumber(stats.cities)} city directories or use the Puff Map and district filters to find a spot. The Puff Guide brings together bakery trails, a random nearby pick, and a private visit diary.</p>
       <p><a href={path()}>Find puffs near you</a> · <a href={path('cities/')}>Browse cities</a> · <a href={path('guide/')}>Explore the Puff Guide</a></p>
       <h2>How the map works</h2>
-      <p>The atlas preserves the original crowdsourced export and its contributor notes. {formatNumber(stats.mappable)} places have coordinates, including {formatNumber(stats.accuracy.estimated ?? 0)} estimated from saved links. District names come from a dated boundary snapshot, and city areas include nearby towns. Each place page shows its source and coordinate accuracy.</p>
+      <p>The atlas preserves the latest crowdsourced export and its contributor notes. {formatNumber(stats.mappable)} places have coordinates, including {formatNumber(stats.accuracy.estimated ?? 0)} estimated from saved links. District names come from a dated boundary snapshot, and city areas include nearby towns. Each place page shows its source and coordinate accuracy.</p>
       <p>Choose device location to sort by straight-line distance. Your location stays in the tab. The basemap is hosted with the atlas, and opening an external map follows that provider’s privacy terms.</p>
       {import.meta.env.PUBLIC_GOOGLE_MAPS_API_KEY && import.meta.env.PUBLIC_GOOGLE_MAPS_MAP_ID && <p>Choosing the Google basemap connects your browser to Google. <a href="https://www.google.com/intl/en_US/help/terms_maps/">Google Maps terms</a> · <a href="https://policies.google.com/privacy">Google privacy policy</a></p>}
       <h2 id="data">Open data</h2>
       <p>Version 1 exports are static files. GeoJSON includes entries with usable coordinates and marks their coordinate accuracy. The archive, reference boundaries, and independently submitted data have separate provenance.</p>
       <ul>{files.map(([label,file]) => <li><a href={path('api/v1/' + file)}>{label} · {file}</a></li>)}</ul>
-      <p><a href={github + '/blob/main/DATA-LICENSE.md'}>Data sources and licensing</a> · <a href={path('schemas/v1/place.json')}>Place schema v1</a> · <a href={path('insights/')}>Atlas insights</a></p>
+      <p><a href={github + '/blob/main/data/mutta-puffs-everywhere.csv'}>Latest Maps export</a> · <a href={github + '/blob/main/DATA-LICENSE.md'}>Data sources and licensing</a> · <a href={path('schemas/v1/place.json')}>Place schema v1</a> · <a href={path('insights/')}>Atlas insights</a></p>
       <h2 id="privacy">Privacy</h2>
       <p>Passport entries and saved drafts use this browser’s storage. They stay here until you choose to share a recap or continue a contribution on GitHub.</p>
       {analyticsConfigured ? <>

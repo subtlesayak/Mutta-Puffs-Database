@@ -1,6 +1,6 @@
 # Place directory
 
-Browse all 149 entries from the crowdsourced MuttaPuffs Everywhere list.
+Browse all 152 entries from the crowdsourced MuttaPuffs Everywhere list.
 
 Select a place to open its original Google Maps link, or choose Apple Maps or OpenStreetMap. The alternate maps search by name for listings and open saved coordinates for direct pins.
 
@@ -301,6 +301,28 @@ Select a place to open its original Google Maps link, or choose Apple Maps or Op
 | --- | --- |
 | [Bangalore Iyengar&#x27;s Bakery](<https://www.google.com/maps/place/Bangalore+Iyengar's+Bakery/data=!4m2!3m1!1s0x3be7bf4c55f2032f:0xfaf8900dd03b7611>) | [Apple Maps](<https://maps.apple.com/search?query=Bangalore+Iyengar%27s+Bakery&center=19.157%2C72.9963>) · [OpenStreetMap](<https://www.openstreetmap.org/search?query=Bangalore+Iyengar%27s+Bakery%2C+Mumbai%2C+Maharashtra%2C+India>) |
 
+## Telangana (3)
+
+### Hydrabad (2)
+
+| Place | Alternate maps |
+| --- | --- |
+| [Sam&#x27;s Bakers](<https://www.google.com/maps/place/Sam's+Bakers/data=!4m2!3m1!1s0x3bcb9a5fb394b4b7:0xe842a92324da6a65>) | [Apple Maps](<https://maps.apple.com/search?query=Sam%27s+Bakers&center=17.4728%2C78.4998>) · [OpenStreetMap](<https://www.openstreetmap.org/search?query=Sam%27s+Bakers%2C+Hyderabad%2C+Telangana%2C+India>) |
+| [SVB Iyengars Bakery](<https://www.google.com/maps/place/SVB+Iyengars+Bakery/data=!4m2!3m1!1s0x3bcb9a66dd1889af:0xd657a2afe0b87277>) | [Apple Maps](<https://maps.apple.com/search?query=SVB+Iyengars+Bakery&center=17.468%2C78.4945>) · [OpenStreetMap](<https://www.openstreetmap.org/search?query=SVB+Iyengars+Bakery%2C+Hyderabad%2C+Telangana%2C+India>) |
+
+### Medchal (1)
+
+| Place | Alternate maps |
+| --- | --- |
+| [The Best Bangalore Iyengar Bakery](<https://www.google.com/maps/place/The+Best+Bangalore+Iyengar+Bakery/data=!4m2!3m1!1s0x3bcb917f89c75837:0x39e149f1a8309d38>) | [Apple Maps](<https://maps.apple.com/search?query=The+Best+Bangalore+Iyengar+Bakery&center=17.4686%2C78.3861>) · [OpenStreetMap](<https://www.openstreetmap.org/search?query=The+Best+Bangalore+Iyengar+Bakery%2C+Hyderabad%2C+Telangana%2C+India>) |
+
+## United Arab Emirates (2)
+
+| Place | Alternate maps |
+| --- | --- |
+| [Tea Station](<https://www.google.com/maps/place/Tea+Station/data=!4m2!3m1!1s0x3e5f6d0373e49e2b:0x436da008b1685a2f>) | [Apple Maps](<https://maps.apple.com/search?query=Tea+Station&center=25.0412%2C55.1731>) · [OpenStreetMap](<https://www.openstreetmap.org/search?query=Tea+Station%2C+Dubai%2C+United+Arab+Emirates>) |
+| [Winny&#x27;s Restaurant &amp; Confectionery](<https://www.google.com/maps/place/Winny's+Restaurant+%26+Confectionery/data=!4m2!3m1!1s0x3e5f42d06e910ee1:0xd30fcfbbaaa69f91>) | [Apple Maps](<https://maps.apple.com/search?query=Winny%27s+Restaurant+%26+Confectionery&center=25.2372%2C55.3042>) · [OpenStreetMap](<https://www.openstreetmap.org/search?query=Winny%27s+Restaurant+%26+Confectionery%2C+Dubai%2C+United+Arab+Emirates>) |
+
 ## United Kingdom (2)
 
 | Place | Alternate maps |
@@ -335,20 +357,6 @@ Select a place to open its original Google Maps link, or choose Apple Maps or Op
 | Place | Alternate maps |
 | --- | --- |
 | [Almas Family Restaurant](<https://www.google.com/maps/place/Almas+Family+Restaurant/data=!4m2!3m1!1s0x3e2f0472e1018c75:0xc0a2dfe0526f6adb>) | [Apple Maps](<https://maps.apple.com/search?query=Almas+Family+Restaurant&center=24.6794%2C46.7271>) · [OpenStreetMap](<https://www.openstreetmap.org/search?query=Almas+Family+Restaurant%2C+Riyadh%2C+Saudi+Arabia>) |
-
-## Telangana (1)
-
-### Medchal (1)
-
-| Place | Alternate maps |
-| --- | --- |
-| [The Best Bangalore Iyengar Bakery](<https://www.google.com/maps/place/The+Best+Bangalore+Iyengar+Bakery/data=!4m2!3m1!1s0x3bcb917f89c75837:0x39e149f1a8309d38>) | [Apple Maps](<https://maps.apple.com/search?query=The+Best+Bangalore+Iyengar+Bakery&center=17.4686%2C78.3861>) · [OpenStreetMap](<https://www.openstreetmap.org/search?query=The+Best+Bangalore+Iyengar+Bakery%2C+Hyderabad%2C+Telangana%2C+India>) |
-
-## United Arab Emirates (1)
-
-| Place | Alternate maps |
-| --- | --- |
-| [Winny&#x27;s Restaurant &amp; Confectionery](<https://www.google.com/maps/place/Winny's+Restaurant+%26+Confectionery/data=!4m2!3m1!1s0x3e5f42d06e910ee1:0xd30fcfbbaaa69f91>) | [Apple Maps](<https://maps.apple.com/search?query=Winny%27s+Restaurant+%26+Confectionery&center=25.2372%2C55.3042>) · [OpenStreetMap](<https://www.openstreetmap.org/search?query=Winny%27s+Restaurant+%26+Confectionery%2C+Dubai%2C+United+Arab+Emirates>) |
 
 ## Location unassigned (4)
 
