@@ -148,6 +148,30 @@ test('the offline atlas can load the GeoJSON outline if the compact asset is mis
 
 test.describe('PWA',()=>{
   test.use({serviceWorkers:'allow'});
+  test('a shared Maps link opens a draft in the last chosen language while offline', async ({page,context,baseURL}) => {
+    await page.goto('ml/');
+    await expect.poll(() => page.evaluate(() => Boolean(navigator.serviceWorker.controller))).toBe(true);
+    const link = 'https://maps.example/test-shop';
+    try {
+      await context.setOffline(true);
+      await page.evaluate(({action,link}) => {
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = action;
+        const input = document.createElement('input');
+        input.name = 'text';
+        input.value = link;
+        form.append(input);
+        document.body.append(form);
+        form.submit();
+      },{action:new URL('share/',baseURL!).href,link});
+      await expect(page).toHaveURL(new URL('ml/contribute/',baseURL!).href);
+      await expect(page.getByLabel('കടയുടെ അല്ലെങ്കിൽ Maps ലിങ്ക്')).toHaveValue(link);
+      await expect(page.locator('[data-import-status]')).toContainText('ലിങ്ക് ചേർത്തു');
+    } finally {
+      await context.setOffline(false);
+    }
+  });
   test('the online atlas opens when the browser refuses cache writes', async ({page,context}) => {
     await page.goto('./');
     await page.evaluate(async () => {await navigator.serviceWorker.ready;});

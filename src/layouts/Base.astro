@@ -75,6 +75,7 @@ const activeSection = section ?? (guideDestinations.some(({route}) => canonical.
 </style>
 <script>
   import {applyMapPreference} from '../lib/map-preference';
+  import {rememberPageLanguage} from '../lib/language-preference';
   import {startAnalytics} from '../scripts/analytics';
   import {enableApp} from '../scripts/pwa';
 
@@ -106,6 +107,7 @@ const activeSection = section ?? (guideDestinations.some(({route}) => canonical.
   });
 
   applyMapPreference();
+  rememberPageLanguage();
   enableApp();
   startAnalytics();
 </script>

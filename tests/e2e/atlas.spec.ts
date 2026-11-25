@@ -132,6 +132,35 @@ test('dated observations validate the price and batch times before opening a Git
   expect(body).toContain('> 08:00, 16:30');
 });
 
+test('localized corrections preserve place IDs and native-script draft text across language switches', async ({page,context,baseURL}) => {
+  await context.route('https://github.com/subtlesayak/Mutta-Puffs-Database/issues/new**',route =>
+    route.fulfill({status:200,contentType:'text/html',body:'<title>GitHub draft request</title>'}));
+  for (const [locale,text] of [
+    ['ml','കടയുടെ പിൻ തിരുത്തുക'], ['hi','दुकान का पिन सही करें'],
+    ['ta','கடையின் இடக்குறியைத் திருத்துங்கள்'], ['kn','ಅಂಗಡಿಯ ಪಿನ್ ತಿದ್ದಿ'],
+  ]) {
+    const id = 'mpdb-7b2be6dd7ad3';
+    await page.goto(locale + '/places/' + id + '/');
+    await page.locator('a[href*="kind=correction"]').click();
+    expect(new URL(page.url()).pathname).toBe(new URL(locale + '/contribute/',baseURL!).pathname);
+    await expect(page.locator('html')).toHaveAttribute('lang',locale);
+    await expect(page.locator('[name=place_id]')).toHaveValue(id);
+    await page.locator('[name=correction]').fill(text);
+    await page.locator('#page-languages').getByRole('link',{name:'English',exact:true}).click();
+    await expect(page.getByLabel('What needs to change?')).toHaveValue(text);
+    await expect(page.getByLabel('Atlas listing')).toHaveValue(id);
+    const pending = page.waitForEvent('popup');
+    await page.getByRole('button',{name:'Continue on GitHub'}).click();
+    const popup = await pending;
+    await popup.waitForLoadState('domcontentloaded');
+    const draft = new URL(popup.url()).searchParams;
+    expect(draft.get('title')).toBe("Correct a listing: Sam's Bakers");
+    expect(draft.get('body')).toContain(id);
+    expect(draft.get('body')).toContain(text);
+    await popup.close();
+  }
+});
+
 test('the Guide and Heritage pass automated accessibility and reflow checks', async ({page, isMobile}) => {
   await page.goto('guide/');
   if (isMobile) {

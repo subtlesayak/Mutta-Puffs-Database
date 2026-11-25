@@ -1,6 +1,6 @@
 ---
 import {atlas} from '../lib/catalogue';
-import {formatMessage, path} from '../lib/format';
+import {formatMessage, localizedPath} from '../lib/format';
 import {finderCopy} from '../lib/finder-copy';
 import type {Locale} from '../lib/locales';
 interface Props {collapsible?: boolean; locale?: Locale}
@@ -28,6 +28,6 @@ const hasScores = metrics.some(metric => metric.score);
     ? <p class="muted">{copy.metricsHelp}</p>
     : <p class="muted">
         {currencies.length === 0 && !hasScores ? copy.awaitingBoth : currencies.length === 0 ? copy.awaitingPrice : copy.awaitingReviews}
-        {' '}<a href={path('contribute/?kind=' + (currencies.length === 0 ? 'observation' : 'review'))} hreflang="en">{copy.report}</a>
+        {' '}<a href={localizedPath('contribute/?kind=' + (currencies.length === 0 ? 'observation' : 'review'),locale)}>{copy.report}</a>
       </p>}
 </Wrapper>
