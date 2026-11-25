@@ -17,6 +17,7 @@ import {communityConfigured} from '../lib/community';
         </form>
         <p class="live-note" data-moderation-status role="status"></p>
         <div class="moderation-queue" data-moderation-items></div>
+        <button class="button secondary" type="button" data-more-submissions hidden>Load older submissions</button>
       </div>
     ) : <p class="panel">The community submission service is unavailable on this site.</p>}
   </div>
@@ -40,9 +41,11 @@ import {communityConfigured} from '../lib/community';
     const form = root.querySelector<HTMLFormElement>('form')!;
     const queue = root.querySelector<HTMLElement>('[data-moderation-items]')!;
     const status = root.querySelector<HTMLElement>('[data-moderation-status]')!;
+    const more = root.querySelector<HTMLButtonElement>('[data-more-submissions]')!;
     const key = form.elements.namedItem('key') as HTMLInputElement;
     const filter = form.elements.namedItem('status') as HTMLSelectElement;
     let requestNumber = 0;
+    let next: string | null = null;
     const choices: Partial<Record<ModeratedSubmission['status'], [ModeratedSubmission['status'],string][]>> = {
       pending:[['approved','Approve for publication'],['rejected','Decline']],
       approved:[['published','Mark published'],['pending','Return to queue']],
@@ -109,7 +112,10 @@ import {communityConfigured} from '../lib/community';
               await communityRequest('v1/moderation/submissions/' + item.id, {
                 token:key.value,method:'PATCH',body:{status:decision,reason:note.input.value,reference:reference?.input.value},
               });
-              await load();
+              if (!article.isConnected) return;
+              article.remove();
+              if (!queue.childElementCount) await load();
+              else status.textContent = queue.childElementCount + ' submissions in view.';
               filter.focus();
             } catch (error) {
               status.textContent = error instanceof Error ? error.message : 'Could not save the decision.';
@@ -127,22 +133,41 @@ import {communityConfigured} from '../lib/community';
       article.append(actions);
       return article;
     }
-    async function load() {
+    async function load(append = false) {
+      const params = new URLSearchParams({status:filter.value});
+      if (append && next) params.set('before',next);
       const request = ++requestNumber;
-      queue.replaceChildren();
+      if (!append) {
+        queue.replaceChildren();
+        next = null;
+        more.hidden = true;
+      }
+      const focusFirstNewItem = append && document.activeElement === more;
+      more.disabled = true;
       status.textContent = 'Loading submissions…';
       try {
-        const {submissions} = await communityRequest<{submissions:ModeratedSubmission[]}>(
-          'v1/moderation/submissions?status=' + filter.value,{token:key.value},
+        const result = await communityRequest<{submissions:ModeratedSubmission[]; next?: string | null}>(
+          'v1/moderation/submissions?' + params,{token:key.value},
         );
         if (request !== requestNumber) return;
-        queue.replaceChildren(...submissions.map(render));
-        status.textContent = submissions.length ? 'Loaded ' + submissions.length + ' submissions.' : 'There are no submissions in this queue.';
+        const articles = result.submissions.map(render);
+        queue.append(...articles);
+        next = result.next ?? null;
+        if (focusFirstNewItem && document.activeElement === document.body) {
+          const target = articles[0]?.querySelector('h2') ?? status;
+          target.tabIndex = -1;
+          target.focus();
+        }
+        more.hidden = !next;
+        status.textContent = queue.childElementCount ? queue.childElementCount + ' submissions in view.' : 'There are no submissions in this queue.';
       } catch (error) {
         if (request === requestNumber) status.textContent = error instanceof Error ? error.message : 'Could not load submissions.';
+      } finally {
+        if (request === requestNumber) more.disabled = false;
       }
     }
     form.addEventListener('submit',event=>{event.preventDefault();void load();});
     filter.addEventListener('change',()=>{if (key.value) void load();});
+    more.addEventListener('click',()=>{if (next) void load(true);});
   }
 </script>

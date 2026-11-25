@@ -14,9 +14,23 @@ Location estimates and source pins are separate from independently verified coor
 
 ## Optional community service
 
-The atlas uses GitHub issue drafts when `PUBLIC_COMMUNITY_API_URL` is empty. To accept contributions without a GitHub account and offer encrypted Passport sync, run `npm run community` with Node 24 and a persistent SQLite directory. Set `MPDB_DATABASE_PATH` to the database file, `MPDB_ALLOWED_ORIGINS` to the browser origin (for GitHub Pages, `https://subtlesayak.github.io`), and `MPDB_MODERATOR_TOKEN` to a private random secret of at least 32 bytes.
+The atlas always offers GitHub issue drafts. To also accept contributions without a GitHub account and offer encrypted Passport sync, run `npm run community` with Node 24 and a persistent SQLite directory. Set `MPDB_DATABASE_PATH` to the database file, `MPDB_ALLOWED_ORIGINS` to the browser origin (for GitHub Pages, `https://subtlesayak.github.io`), and `MPDB_MODERATOR_TOKEN` to a private random secret of at least 32 bytes.
 
-The Node service defaults to `127.0.0.1:8787`. Put it behind an HTTPS reverse proxy and check the public `/health` route before setting `PUBLIC_COMMUNITY_API_URL` to the HTTPS API root in the repository’s Actions variables. Redeploy Pages to use the service. Back up the SQLite database with SQLite’s backup mechanism and keep the moderator secret outside the repository and public build.
+The Node service defaults to `127.0.0.1:8787`. Run it under the VPS service manager with a dedicated account that can write its SQLite directory. Keep the database and moderator secret outside the repository and public build. Back up the database with SQLite’s backup mechanism.
+
+Set up an HTTPS reverse proxy for the API hostname. For a Caddy instance on the same host that receives connections directly from the internet, use a site block like this and set `MPDB_TRUST_LOCAL_PROXY=1` in the API service environment.
+
+```caddyfile
+api.example.org {
+    reverse_proxy 127.0.0.1:8787 {
+        header_up X-MPDB-Client-IP {remote_host}
+    }
+}
+```
+
+The proxy overwrites the client-address header, and the API trusts it only on loopback when enabled. If the VPS already runs a reverse proxy, configure the equivalent header on that proxy. [Caddy reverse proxy documentation](https://caddyserver.com/docs/caddyfile/directives/reverse_proxy)
+
+Check that the HTTPS `/health` route returns `{"ok":true}`. Then set `PUBLIC_COMMUNITY_API_URL` to the HTTPS API root in the repository’s Actions variables and redeploy Pages. To exercise the account-free form and Passport sync with a local test database, run `MPDB_TEST_COMMUNITY=1 npm run test:e2e` after installing the Playwright Chromium browser.
 
 Open `/moderation/` under the atlas URL and enter the moderation key to review the queue. Check consent and evidence, then approve or decline. For an approved entry, open its GitHub record, follow the publication steps above, and attach the issue or pull request to the submission. Contributors can check the outcome with their private receipt code.
 

@@ -30,17 +30,24 @@ export async function communityRequest<T>(route: string, options: {method?: stri
   const headers: Record<string, string> = {};
   if (options.token) headers.Authorization = 'Bearer ' + options.token;
   if (options.body !== undefined) headers['Content-Type'] = 'application/json';
-  const response = await fetch(new URL(route, endpoint), {
-    method: options.method ?? 'GET',
-    headers,
-    body: options.body === undefined ? undefined : JSON.stringify(options.body),
-    credentials: 'omit',
-    cache: 'no-store',
-    referrerPolicy: 'no-referrer',
-  });
-  const data = await response.json().catch(() => null);
-  if (!response.ok) {
-    throw new Error(typeof data?.error === 'string' ? data.error : 'Could not reach the submission service. Try again.');
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 20_000);
+  try {
+    const response = await fetch(new URL(route, endpoint), {
+      method: options.method ?? 'GET',
+      headers,
+      body: options.body === undefined ? undefined : JSON.stringify(options.body),
+      credentials: 'omit',
+      cache: 'no-store',
+      referrerPolicy: 'no-referrer',
+      signal:controller.signal,
+    }).catch(() => {throw new Error('Could not reach the community service.');});
+    const data = await response.json().catch(() => null);
+    if (!response.ok || data === null) {
+      throw new Error(typeof data?.error === 'string' ? data.error : 'Could not reach the community service.');
+    }
+    return data as T;
+  } finally {
+    clearTimeout(timeout);
   }
-  return data as T;
 }

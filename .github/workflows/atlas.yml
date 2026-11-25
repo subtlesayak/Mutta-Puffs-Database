@@ -45,6 +45,9 @@ jobs:
       - run: python scripts/check_site.py
       - run: npx playwright install --with-deps --only-shell chromium
       - run: npm run test:e2e
+      - run: npm run test:e2e
+        env:
+          MPDB_TEST_COMMUNITY: "1"
       - uses: actions/configure-pages@v5
         if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
       - uses: actions/upload-pages-artifact@v4
