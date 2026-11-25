@@ -79,19 +79,19 @@ const seo = {'@context':'https://schema.org','@type':'Place',name:place.name,des
           <p dir="auto">{review.note}</p>
           <p class="muted">{scoreKeys.map(key => copy.scoreLabels[key] + ' ' + numbers.format(review.scores[key]) + '/10').join(' · ')}</p>
         </li>)}</ol> : <p class="muted">{copy.noReviews}</p>}
-        <a class="text-link" href={path('contribute/?kind=review&place=' + place.id)} hreflang="en">{copy.addReview} <Icon name="arrow" size={16} /></a>
+        <a class="text-link" href={localizedPath('contribute/?kind=review&place=' + place.id,locale)}>{copy.addReview} <Icon name="arrow" size={16} /></a>
       </section>
       <section class="panel"><h2 class="panel-title">{copy.photos}</h2>{place.photos.length ? <div class="grid-2">
         {place.photos.map(photo => <figure><img src={photo.url} alt={photo.alt} loading="lazy" referrerpolicy="no-referrer" /><figcaption><a href={photo.source}>{photo.credit}</a> · {photo.license}{photo.captured_on ? ' · ' + date(photo.captured_on) : ''}</figcaption></figure>)}
       </div> : <p class="muted">{copy.noPhotos}</p>}
-        <a class="text-link" href={path('contribute/?kind=photo&place=' + place.id)} hreflang="en">{copy.addPhoto} <Icon name="arrow" size={16} /></a>
+        <a class="text-link" href={localizedPath('contribute/?kind=photo&place=' + place.id,locale)}>{copy.addPhoto} <Icon name="arrow" size={16} /></a>
       </section>
       <section class="panel">
         <h2 class="panel-title">{copy.corrections}</h2>
         <p>{place.source.kind === 'original_maps_export' ? copy.sourceExport : copy.sourceCommunity}{place.source.source_row ? ' · ' + formatMessage(copy.row,{number:numbers.format(place.source.source_row)}) : ''}</p>
         {place.source.reference && <p><a href={place.source.reference}>{copy.original}</a></p>}
         {place.verification.last_verified && <p>{formatMessage(copy.verifiedOn,{date:date(place.verification.last_verified)})}{place.verification.reference && <> · <a href={place.verification.reference}>{copy.evidence}</a></>}</p>}
-        <a class="text-link" href={path('contribute/?kind=correction&place=' + place.id)} hreflang="en">{copy.correct} <Icon name="arrow" size={16} /></a>
+        <a class="text-link" href={localizedPath('contribute/?kind=correction&place=' + place.id,locale)}>{copy.correct} <Icon name="arrow" size={16} /></a>
       </section>
     </div>
   </div>

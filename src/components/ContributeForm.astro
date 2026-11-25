@@ -1,0 +1,564 @@
+---
+import Base from '../layouts/Base.astro';
+import Icon from './Icon.astro';
+import {atlas} from '../lib/catalogue';
+import {github} from '../lib/format';
+import {communityConfigured} from '../lib/community';
+import {contributionCopy, type ContributionRuntimeCopy} from '../lib/contribution-copy';
+import {translatedPlaceName} from '../lib/place-search';
+import type {ContributionKind} from '../lib/github-draft';
+import type {Locale} from '../lib/locales';
+
+interface Props {locale?: Locale}
+const {locale = 'en'} = Astro.props;
+const copy = contributionCopy[locale];
+const f = copy.form;
+const s = copy.sidebar;
+const forms = Object.entries(copy.kinds);
+const runtime: ContributionRuntimeCopy = {
+  ...copy.status,undo:f.undo,replaceUndo:f.replaceUndo,observationErrors:copy.observationErrors,
+};
+const places = atlas.places.slice().sort((a,b)=>a.name.localeCompare(b.name));
+const scores = Object.entries(f.scores);
+---
+<Base title={copy.title} section="Contribute" description={copy.description} locale={locale} languageRoute="contribute/">
+  <div class="shell">
+    <header class="page-head"><p class="kicker">{copy.title}</p><h1>{copy.heading}</h1><p>{communityConfigured ? copy.introCommunity : copy.intro}</p></header>
+    <div class="contribute-grid">
+      <form class="panel" data-contribution data-github={github} data-contribution-copy={JSON.stringify(runtime)}>
+        <p data-import-status class="import-status" role="status"></p>
+        <label class="field">{f.chooseKind} <select id="kind">{forms.map(([kind,title]) => <option value={kind} data-issue-prefix={contributionCopy.en.kinds[kind as ContributionKind]}>{title}</option>)}</select></label>
+        <div class="contribution-fields" data-capture>
+          <div class="share-paste" id="paste-link">
+            <label class="field">{f.paste} <textarea data-share-paste maxlength="2000" rows="2" aria-describedby="paste-help"></textarea></label>
+            <p id="paste-help" class="muted">{f.pasteHelp}</p>
+            <div class="actions">
+              <button type="button" class="button secondary small" data-import-share>{f.fill}</button>
+              <button type="button" class="button secondary small" data-paste-clipboard hidden>{f.clipboard}</button>
+            </div>
+          </div>
+          <div class="actions"><button class="button secondary" type="button" data-capture-location><Icon name="location" size={18} /> {f.locate}</button></div>
+          <p class="muted">{f.locationHelp}</p>
+        </div>
+        <div class="contribution-fields" data-kind="place">
+          <label class="field">{f.place_name} <input name="place_name" maxlength="200" required /></label>
+          <label class="field">{f.area} <input name="area" maxlength="150" required /></label>
+          <label class="field">{f.map_link} <input name="map_link" type="url" maxlength="650" placeholder="https://…" required /></label>
+          <label class="field">{f.details} <textarea name="details" maxlength="1000" placeholder={copy.examples.details} required></textarea></label>
+        </div>
+        <div class="contribution-fields" data-linked hidden>
+          <label class="field">{f.place_id} <select name="place_id" required>
+            <option value="">{f.choosePlace}</option>{places.map(place => <option value={place.id}>{place.name}{place.location.city ? ' · ' + translatedPlaceName(place.location.city,locale) : ''} · {place.id}</option>)}
+          </select></label>
+        </div>
+        <fieldset class="contribution-fields" data-kind="correction" hidden disabled>
+          <legend>{f.correctionLegend}</legend>
+          <label class="field">{f.correction} <textarea name="correction" maxlength="900" required placeholder={copy.examples.correction}></textarea></label>
+          <label class="field">{f.evidence} <input name="evidence" type="url" maxlength="650" placeholder="https://…" /></label>
+          <label class="field">{f.verified_on} <input name="verified_on" type="date" aria-describedby="verification-help" /></label>
+          <small id="verification-help">{f.verificationHelp}</small>
+        </fieldset>
+        <fieldset class="contribution-fields" data-kind="review" hidden disabled>
+          <legend>{f.reviewLegend}</legend>
+          <label class="field">{f.visited_on} <input name="visited_on" type="date" required /></label>
+          <p class="muted" id="rating-help">{f.ratingHelp}</p>
+          <div class="rating-fields">{scores.map(([name,label]) => <div class="rating-field">
+            <div class="rating-heading"><label for={'rating-' + name}>{label}</label><span data-rating-value aria-hidden="true">5 / 10</span></div>
+            <input id={'rating-' + name} name={name} type="range" min="1" max="10" step="1" value="5" aria-describedby="rating-help" />
+          </div>)}</div>
+          <label class="field">{f.review_note} <textarea name="review_note" maxlength="900" required></textarea></label>
+        </fieldset>
+        <fieldset class="contribution-fields" data-kind="observation" hidden disabled>
+          <legend>{f.observationLegend}</legend>
+          <label class="field">{f.observed_on} <input name="observed_on" type="date" required /></label>
+          <div class="field">
+            <label for="observation-price">{f.price}</label>
+            <input id="observation-price" name="price" maxlength="35" placeholder="25 INR" aria-describedby="observation-price-help observation-price-error" data-observation-input />
+            <small id="observation-price-help">{f.priceHelp}</small>
+            <small id="observation-price-error" class="field-error" hidden></small>
+          </div>
+          <label class="field">{f.egg_portion} <select name="egg_portion"><option value="">{f.known}</option>{Object.entries(f.portions).map(([value,label]) => <option value={value}>{label}</option>)}</select></label>
+          <div class="field">
+            <label for="observation-times">{f.fresh_batch_times}</label>
+            <input id="observation-times" name="fresh_batch_times" maxlength="60" placeholder="08:00, 16:30" aria-describedby="observation-times-help observation-times-error" data-observation-input />
+            <small id="observation-times-help">{f.timesHelp}</small>
+            <small id="observation-times-error" class="field-error" hidden></small>
+          </div>
+          <label class="field">{f.availability} <select name="availability"><option value="">{f.known}</option>{Object.entries(f.stock).map(([value,label]) => <option value={value}>{label}</option>)}</select></label>
+        </fieldset>
+        <fieldset class="contribution-fields" data-kind="photo" hidden disabled>
+          <legend>{f.photoLegend}</legend>
+          <p>{f.photoHelp}</p>
+          <label class="field">{f.photo_url} <input name="photo_url" type="url" maxlength="650" placeholder="https://…" /></label>
+          <label class="field">{f.alt} <textarea name="alt" maxlength="250" required placeholder={copy.examples.alt}></textarea></label>
+          <label class="field">{f.credit} <input name="credit" maxlength="120" required /></label>
+          <label class="field">{f.captured_on} <input name="captured_on" type="date" /></label>
+        </fieldset>
+        <fieldset class="contribution-fields" data-kind="heritage" hidden disabled>
+          <legend>{f.storyLegend}</legend>
+          <label class="field">{f.story_title} <input name="story_title" maxlength="120" required /></label>
+          <label class="field">{f.story} <textarea name="story" maxlength="1800" required placeholder={copy.examples.story}></textarea></label>
+          <label class="field">{f.story_source} <input name="story_source" type="url" maxlength="650" /></label>
+        </fieldset>
+        {communityConfigured && <label class="check"><input name="publication_consent" type="checkbox" /> {f.consent}</label>}
+        <p data-form-error role="alert"></p>
+        <div class="actions">
+          {communityConfigured && <button class="button" type="submit" data-community-submit>{f.send} <Icon name="arrow" size={18} /></button>}
+          <button class:list={['button',{secondary:communityConfigured}]} type="submit" data-github-submit>{f.github} <Icon name="external" size={18} /></button>
+          <button class="button secondary" type="button" data-save-draft>{f.save}</button>
+          <button class="button secondary" type="button" data-clear-draft hidden>{f.remove}</button>
+          <button class="button secondary" type="button" data-undo-draft hidden>{f.undo}</button>
+        </div>
+        <section class="github-draft" data-github-draft aria-labelledby="github-draft-title" hidden>
+          <h2 id="github-draft-title">{f.githubDraft}</h2>
+          <p data-github-help></p>
+          <div class="actions">
+            <button type="button" class="button secondary small" data-copy-issue>{f.copyIssue}</button>
+            <a class="button secondary small" data-open-issue target="_blank" rel="noopener noreferrer" hreflang="en">{f.openIssue} <Icon name="external" size={16} /></a>
+          </div>
+          <p data-copy-status role="status"></p>
+          <details data-issue-preview>
+            <summary>{f.viewIssue}</summary>
+            <label class="field">{f.issueBody} <textarea data-issue-body rows="8" readonly></textarea></label>
+          </details>
+        </section>
+      </form>
+      <aside class="panel">
+        <section id="install">
+          <h2>{s.install}</h2>
+          <p>{s.android}</p>
+          <button class="button secondary" type="button" data-install-app hidden>{s.installButton}</button>
+          <p>{s.edge}</p>
+          <p>{s.ios}</p>
+        </section>
+        <h2>{s.what}</h2>
+        <ul>
+          <li>{s.own}</li>
+          <li>{s.pin}</li>
+          <li>{s.privacy}</li>
+        </ul>
+        {communityConfigured && <section class="receipt-panel" aria-labelledby="receipt-heading">
+          <h2 id="receipt-heading">{s.receipt}</h2>
+          <p>{s.receiptHelp}</p>
+          <form data-receipt>
+            <label class="field">{s.receiptLabel} <input name="receipt" type="text" autocomplete="off" autocapitalize="none" required /></label>
+            <button class="button secondary small" type="submit">{s.check}</button>
+          </form>
+          <p class="live-note" data-receipt-status role="status"></p>
+          <a data-publication-link hidden hreflang="en">{s.published}</a>
+        </section>}
+        <h2>{s.issueForms}</h2>
+        <ul>{forms.map(([kind,title]) => <li><a href={github + '/issues/new?template=' + kind + '.yml'} hreflang="en">{title}</a></li>)}</ul>
+      </aside>
+    </div>
+  </div>
+</Base>
+<style>
+  .contribute-grid {display:grid; grid-template-columns:minmax(0,1.65fr) minmax(0,1fr); gap:1rem; align-items:start;}
+  .contribution-fields {display:grid; gap:.8rem; margin-block:1rem; padding:0; border:0; min-inline-size:0;}
+  .github-draft {margin-block-start:1rem; padding-block-start:1rem; border-block-start:1px solid var(--line);}
+  .github-draft h2 {font-size:1.4rem;}
+  .github-draft p:not(:empty), .github-draft details {margin-block:.65rem;}
+  .github-draft summary {cursor:pointer; font-weight:750;}
+  .github-draft textarea {margin-block-start:.25rem;}
+  legend {font-weight:800; margin-block-end:.55rem;}
+  [data-form-error]:not(:empty) {margin-block:.55rem; color:var(--rust); font-weight:800;}
+  .field .field-error {color:var(--rust); font-weight:750;}
+  .import-status:not(:empty) {margin-block-end:.85rem; padding:.6rem .7rem; border-radius:.5rem; background:var(--sage); color:var(--pine); font-weight:750;}
+  .share-paste {display:grid; gap:.48rem; padding:.8rem; border:1px solid var(--line); border-radius:.65rem; background:var(--paper);}
+  .share-paste textarea {min-block-size:4rem;}
+  .rating-fields {display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,12rem),1fr)); gap:.7rem;}
+  .rating-field {min-inline-size:0; padding:.65rem .8rem; border:1px solid var(--line); border-radius:.65rem;}
+  .rating-heading {display:flex; flex-wrap:wrap; align-items:baseline; justify-content:space-between; gap:.2rem .55rem;}
+  .rating-heading label {font-weight:750;}
+  .rating-heading span {color:var(--pine); font-weight:800; font-variant-numeric:tabular-nums;}
+  .rating-field input {display:block; inline-size:100%; min-inline-size:0; block-size:2.75rem; accent-color:var(--pine); margin:0;}
+  aside h2 {font-size:1.55rem;}
+  .receipt-panel {margin-block-end:1.25rem;}
+  aside p, aside button {margin-block:.7rem;}
+  aside #install {padding-block-end:1rem; margin-block-end:1rem; border-block-end:1px solid var(--line);}
+  aside ul {padding-inline-start:1.35rem;}
+  @media (max-width:45rem) {.contribute-grid {grid-template-columns:minmax(0,1fr);}}
+</style>
+<script>
+  import {browserPosition} from '../lib/distance';
+  import {contributionDraft, pinLink} from '../lib/share';
+  import {githubDraft, type ContributionKind} from '../lib/github-draft';
+  import {track} from '../scripts/analytics';
+  import {pagePlaceAliases, resolvePlaceId} from '../lib/place-identity';
+  import {communityRequest, type Receipt} from '../lib/community';
+  import {invalidObservationField} from '../lib/observation-fields';
+  import type {ContributionRuntimeCopy} from '../lib/contribution-copy';
+  import {preferredLocale} from '../lib/language-preference';
+  import {localizedPath} from '../lib/format';
+  const form = document.querySelector<HTMLFormElement>('[data-contribution]')!;
+  const copy = JSON.parse(form.dataset.contributionCopy!) as ContributionRuntimeCopy;
+  const locale = document.documentElement.lang;
+  const kind = form.querySelector<HTMLSelectElement>('#kind')!;
+  const listing = form.querySelector<HTMLSelectElement>('[name=place_id]')!;
+  const linked = form.querySelector<HTMLElement>('[data-linked]')!;
+  const alert = form.querySelector<HTMLElement>('[data-form-error]')!;
+  const notice = form.querySelector<HTMLElement>('[data-import-status]')!;
+  const capture = form.querySelector<HTMLElement>('[data-capture]')!;
+  const locate = form.querySelector<HTMLButtonElement>('[data-capture-location]')!;
+  const paste = form.querySelector<HTMLTextAreaElement>('[data-share-paste]')!;
+  const clipboard = form.querySelector<HTMLButtonElement>('[data-paste-clipboard]')!;
+  const ratings = [...form.querySelectorAll<HTMLInputElement>('.rating-field input')];
+  const observationInputs = [...form.querySelectorAll<HTMLInputElement>('[data-observation-input]')];
+  const saveButton = form.querySelector<HTMLButtonElement>('[data-save-draft]')!;
+  const savedButton = form.querySelector<HTMLButtonElement>('[data-clear-draft]')!;
+  const undoButton = form.querySelector<HTMLButtonElement>('[data-undo-draft]')!;
+  const githubPanel = form.querySelector<HTMLElement>('[data-github-draft]')!;
+  const githubHelp = form.querySelector<HTMLElement>('[data-github-help]')!;
+  const copyIssue = form.querySelector<HTMLButtonElement>('[data-copy-issue]')!;
+  const openIssue = form.querySelector<HTMLAnchorElement>('[data-open-issue]')!;
+  const copyStatus = form.querySelector<HTMLElement>('[data-copy-status]')!;
+  const issuePreview = form.querySelector<HTMLDetailsElement>('[data-issue-preview]')!;
+  const issueBody = form.querySelector<HTMLTextAreaElement>('[data-issue-body]')!;
+  const draftKey = 'mpdb-private-contribution-draft';
+  const switchKey = 'mpdb-contribution-language-draft';
+  let draftUndo: {previous: string; expected: string | null} | null = null;
+  const field = (name: string) => form.elements.namedItem(name) as HTMLInputElement | HTMLTextAreaElement | null;
+  let sharedLink = '';
+  let lastRequest: {signature: string; id: string; token: string} | null = null;
+  let locationRequest = 0;
+  const params = new URLSearchParams(location.search);
+  if ([...kind.options].some(option => option.value === params.get('kind'))) kind.value = params.get('kind')!;
+  const aliases = pagePlaceAliases();
+  const requestedPlace = resolvePlaceId(params.get('place') ?? '', aliases);
+  if ([...listing.options].some(option => option.value === requestedPlace)) listing.value = requestedPlace;
+  const currentDraft = () => ({kind:kind.value,fields:Object.fromEntries(new FormData(form))});
+  function restoreDraft(draft: {kind?: unknown; fields?: Record<string,unknown>}, keepConsent = false) {
+    if ([...kind.options].some(option => option.value === draft.kind)) kind.value = draft.kind as string;
+    for (const [name,value] of Object.entries(draft.fields ?? {})) {
+      const input = field(name);
+      if (!input || typeof value !== 'string') continue;
+      if (input instanceof HTMLInputElement && input.type === 'checkbox') {
+        if (keepConsent) input.checked = value === input.value;
+      } else input.value = name === 'place_id' ? resolvePlaceId(value,aliases) : value;
+    }
+  }
+  for (const link of document.querySelectorAll<HTMLAnchorElement>('#page-languages a')) {
+    const destination = new URL(link.href);
+    if (params.has('kind')) destination.searchParams.set('kind',kind.value);
+    if (listing.value) destination.searchParams.set('place',listing.value);
+    link.href = destination.href;
+    link.addEventListener('click',event => {
+      if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+      if (destination.pathname === location.pathname) {
+        event.preventDefault();
+        return;
+      }
+      destination.searchParams.set('kind',kind.value);
+      if (listing.value) destination.searchParams.set('place',listing.value);
+      else destination.searchParams.delete('place');
+      link.href = destination.href;
+      const draft = currentDraft();
+      const hasDetails = Object.entries(draft.fields).some(([name,value]) => name !== 'place_id' && value &&
+        !ratings.some(input => input.name === name && input.defaultValue === value));
+      if (!hasDetails && !paste.value) return;
+      try {
+        sessionStorage.setItem(switchKey,JSON.stringify({path:destination.pathname,draft,paste:paste.value,request:lastRequest}));
+      } catch {
+        event.preventDefault();
+        alert.textContent = copy.switchFailed;
+        alert.scrollIntoView({block:'nearest'});
+      }
+    });
+  }
+  const day = new Date();
+  const localDate = [day.getFullYear(),String(day.getMonth() + 1).padStart(2,'0'),String(day.getDate()).padStart(2,'0')].join('-');
+  for (const input of form.querySelectorAll<HTMLInputElement>('input[type=date]')) input.max = localDate;
+  function showRating(input: HTMLInputElement) {
+    input.parentElement!.querySelector('[data-rating-value]')!.textContent = input.value + ' / 10';
+  }
+  for (const input of ratings) input.addEventListener('input',() => showRating(input));
+  function setObservationError(input: HTMLInputElement, message: string) {
+    const error = form.querySelector<HTMLElement>('#' + input.id + '-error')!;
+    input.setAttribute('aria-invalid',String(Boolean(message)));
+    error.textContent = message;
+    error.hidden = !message;
+  }
+  for (const input of observationInputs) input.addEventListener('input',() => setObservationError(input,''));
+  function update() {
+    for (const group of form.querySelectorAll<HTMLElement>('[data-kind]')) {
+      group.hidden = group.dataset.kind !== kind.value;
+      for (const input of group.querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>('input,select,textarea')) input.disabled = group.hidden;
+      if (group instanceof HTMLFieldSetElement) group.disabled = group.hidden;
+    }
+    linked.hidden = kind.value === 'place' || kind.value === 'heritage';
+    listing.disabled = linked.hidden;
+    capture.hidden = kind.value !== 'place' && kind.value !== 'correction';
+    if (kind.value === 'correction' && sharedLink && !field('evidence')?.value) field('evidence')!.value = sharedLink;
+    ratings.forEach(showRating);
+    alert.textContent = '';
+  }
+  function fillDraft(draft: ReturnType<typeof contributionDraft>) {
+    githubPanel.hidden = true;
+    if (draft.link) {
+      sharedLink = draft.link;
+      const link = field(kind.value === 'correction' ? 'evidence' : 'map_link');
+      if (link) link.value = draft.link;
+    }
+    if (kind.value === 'place') {
+      if (draft.name && !field('place_name')?.value) field('place_name')!.value = draft.name;
+      if (draft.details && !field('details')?.value) field('details')!.value = draft.details;
+    }
+    notice.textContent = draft.link ? copy.linkAdded : copy.noLink;
+  }
+  kind.addEventListener('change',() => {
+    locationRequest++;
+    locate.disabled = false;
+    githubPanel.hidden = true;
+    update();
+  });
+  form.querySelector('[data-import-share]')?.addEventListener('click',() => fillDraft(contributionDraft({text:paste.value})));
+  clipboard.hidden = !navigator.clipboard?.readText;
+  clipboard.addEventListener('click',async () => {
+    clipboard.disabled = true;
+    const requestedKind = kind.value;
+    try {
+      const text = await navigator.clipboard.readText();
+      if (kind.value !== requestedKind) return;
+      paste.value = text.slice(0,paste.maxLength);
+      fillDraft(contributionDraft({text:paste.value}));
+    } catch {
+      if (kind.value === requestedKind) {
+        notice.textContent = copy.pasteDirect;
+        paste.focus();
+      }
+    } finally {
+      clipboard.disabled = false;
+    }
+  });
+  locate.addEventListener('click',async () => {
+    const request = ++locationRequest;
+    if (!navigator.geolocation) {
+      notice.textContent = copy.noLocation;
+      return;
+    }
+    locate.disabled = true;
+    notice.textContent = copy.locating;
+    try {
+      const [latitude,longitude] = await browserPosition(navigator.geolocation);
+      if (request !== locationRequest) return;
+      const link = pinLink(latitude,longitude);
+      if (!link) throw new Error('Invalid position');
+      fillDraft({name:'',link,details:''});
+    } catch {
+      if (request === locationRequest) notice.textContent = copy.locationFailed;
+    } finally {
+      if (request === locationRequest) locate.disabled = false;
+    }
+  });
+  saveButton.addEventListener('click',() => {
+    try {
+      const previous = localStorage.getItem(draftKey);
+      const draft = JSON.stringify(currentDraft());
+      localStorage.setItem(draftKey,draft);
+      if (previous && previous !== draft) draftUndo = {previous,expected:draft};
+      undoButton.hidden = !draftUndo;
+      undoButton.textContent = copy.replaceUndo;
+      savedButton.hidden = false;
+      notice.textContent = previous && previous !== draft
+        ? copy.replaced
+        : copy.saved;
+    } catch {
+      notice.textContent = copy.saveFailed;
+    }
+  });
+  savedButton.addEventListener('click',() => {
+    try {
+      const draft = localStorage.getItem(draftKey);
+      localStorage.removeItem(draftKey);
+      draftUndo = draft ? {previous:draft,expected:null} : null;
+      savedButton.hidden = true;
+      undoButton.hidden = !draftUndo;
+      undoButton.textContent = copy.undo;
+      notice.textContent = draft === null ? copy.noDraft : copy.removed;
+      (draft === null ? saveButton : undoButton).focus();
+    } catch {
+      notice.textContent = copy.removeFailed;
+    }
+  });
+  undoButton.addEventListener('click',() => {
+    if (!draftUndo) return;
+    try {
+      if (localStorage.getItem(draftKey) !== draftUndo.expected) {
+        notice.textContent = copy.different;
+        return;
+      }
+      localStorage.setItem(draftKey,draftUndo.previous);
+      draftUndo = null;
+      undoButton.hidden = true;
+      savedButton.hidden = false;
+      notice.textContent = copy.restored;
+      savedButton.focus();
+    } catch {
+      notice.textContent = copy.restoreFailed;
+    }
+  });
+  form.addEventListener('input',event => {
+    alert.textContent = '';
+    if (event.target instanceof Node && !githubPanel.contains(event.target)) githubPanel.hidden = true;
+  });
+  copyIssue.addEventListener('click',async () => {
+    try {
+      await navigator.clipboard.writeText(issueBody.value);
+      copyStatus.textContent = copy.copySuccess;
+    } catch {
+      issuePreview.open = true;
+      issueBody.focus();
+      issueBody.select();
+      copyStatus.textContent = copy.copyManual;
+    }
+  });
+  const receiptForm = document.querySelector<HTMLFormElement>('[data-receipt]');
+  const receiptField = receiptForm?.querySelector<HTMLInputElement>('input') ?? null;
+  const receiptStatus = document.querySelector<HTMLElement>('[data-receipt-status]');
+  const publication = document.querySelector<HTMLAnchorElement>('[data-publication-link]');
+  const sending = form.querySelector<HTMLButtonElement>('[data-community-submit]');
+  const githubSubmit = form.querySelector<HTMLButtonElement>('[data-github-submit]')!;
+  function showFailure(target: HTMLElement, error: unknown, message: string, recovery = '') {
+    const detail = error instanceof Error ? error.message : '';
+    target.textContent = [locale === 'en' && detail ? detail : message,recovery].filter(Boolean).join(' ');
+    if (locale !== 'en' && detail) {
+      const explanation = document.createElement('span');
+      explanation.lang = 'en';
+      explanation.textContent = detail;
+      target.append(' ',explanation);
+    }
+  }
+  receiptForm?.addEventListener('submit', async event => {
+    event.preventDefault();
+    if (!receiptField || !receiptStatus || !publication) return;
+    const match = /^([a-f0-9-]{36})\.([A-Za-z0-9_-]{43})$/.exec(receiptField.value.trim());
+    publication.hidden = true;
+    if (!match) {receiptStatus.textContent = copy.fullReceipt; return;}
+    receiptStatus.textContent = copy.checking;
+    try {
+      const receipt = await communityRequest<Receipt>('v1/submissions/' + match[1], {token:match[2]});
+      receiptStatus.textContent = copy[receipt.status] + (receipt.reason ? ' ' + receipt.reason : '');
+      if (receipt.reference && /^https:\/\/github\.com\/subtlesayak\/Mutta-Puffs-Database\/(issues|pull)\/\d+$/.test(receipt.reference)) {
+        publication.href = receipt.reference;
+        publication.hidden = false;
+      }
+    } catch (error) {
+      showFailure(receiptStatus,error,copy.receiptFailed);
+    }
+  });
+  form.addEventListener('submit',async event => {
+    event.preventDefault();
+    const data = new FormData(form);
+    if (kind.value === 'observation') {
+      if (!['price','egg_portion','fresh_batch_times','availability'].some(key => String(data.get(key) ?? '').trim())) {
+        alert.textContent = copy.observationRequired;
+        return;
+      }
+      const invalid = invalidObservationField({price:String(data.get('price') ?? ''),fresh_batch_times:String(data.get('fresh_batch_times') ?? '')});
+      if (invalid) {
+        const input = observationInputs.find(control => control.name === invalid)!;
+        setObservationError(input,copy.observationErrors[invalid]);
+        input.focus();
+        return;
+      }
+    }
+    if (sending && event.submitter !== githubSubmit) {
+      if (sending.disabled) return;
+      if (kind.value === 'photo' && !String(data.get('photo_url') ?? '').trim()) {
+        alert.textContent = copy.photoRequired;
+        field('photo_url')?.focus();
+        return;
+      }
+      if (data.get('publication_consent') !== 'on') {
+        alert.textContent = copy.consentRequired;
+        field('publication_consent')?.focus();
+        return;
+      }
+      data.delete('publication_consent');
+      sending.disabled = githubSubmit.disabled = true;
+      try {
+        const fields = Object.fromEntries([...data].filter(([,value])=>String(value).trim()));
+        const submission = {kind:kind.value,fields,consent:true};
+        const signature = JSON.stringify(submission);
+        if (lastRequest?.signature !== signature) {
+          const secret = crypto.getRandomValues(new Uint8Array(32));
+          const token = btoa(String.fromCharCode(...secret)).replaceAll('+','-').replaceAll('/','_').replace(/=+$/,'');
+          lastRequest = {signature,id:crypto.randomUUID(),token};
+        }
+        const {id,token} = lastRequest;
+        const receipt = await communityRequest<Receipt & {token:string}>('v1/submissions',{
+          method:'POST', body:{...submission,id,token},
+        });
+        const code = receipt.id + '.' + receipt.token;
+        if (receiptField) receiptField.value = code;
+        if (receiptStatus) receiptStatus.textContent = copy.received;
+        notice.textContent = copy.sent;
+        receiptField?.focus();
+        receiptField?.select();
+      } catch (error) {
+        showFailure(alert,error,copy.sendFailed,copy.retry);
+      } finally {
+        sending.disabled = githubSubmit.disabled = false;
+      }
+      return;
+    }
+    const title = data.get('place_name') || data.get('story_title') || listing.selectedOptions[0]?.text.split(' · ')[0];
+    const draft = githubDraft(form.dataset.github!,kind.value as ContributionKind,kind.selectedOptions[0].dataset.issuePrefix + ': ' + title,data);
+    issueBody.value = draft.body;
+    openIssue.href = draft.href;
+    copyStatus.textContent = '';
+    githubHelp.textContent = draft.prefilled
+      ? copy.prefilled
+      : copy.tooLong;
+    githubPanel.hidden = false;
+    copyIssue.focus();
+    track({name:'contribution_handoff',data:{kind:kind.value}});
+    if (draft.prefilled) openIssue.click();
+  });
+  const anchor = new URL(location.href);
+  const incoming = new URLSearchParams(anchor.hash.slice(1)).get('shared');
+  const receivedShare = incoming !== null || anchor.hash === '#share-error';
+  const preferred = preferredLocale();
+  if (receivedShare && locale === 'en' && preferred !== 'en') {
+    location.replace(localizedPath('contribute/' + anchor.search + anchor.hash,preferred));
+  } else {
+    if (receivedShare) {
+      anchor.hash = '';
+      history.replaceState(null,'',anchor);
+      try {
+        if (!incoming) throw new Error('Share unavailable');
+        kind.value = 'place';
+        fillDraft(contributionDraft(JSON.parse(incoming)));
+      } catch {
+        notice.textContent = copy.shareFailed;
+      }
+    }
+    let switched = false;
+    try {
+      const pending = sessionStorage.getItem(switchKey);
+      sessionStorage.removeItem(switchKey);
+      if (pending && !receivedShare) {
+        const state = JSON.parse(pending);
+        if (state.path === location.pathname && state.draft) {
+          restoreDraft(state.draft,true);
+          if (typeof state.paste === 'string') paste.value = state.paste;
+          const request = state.request;
+          if (typeof request?.id === 'string' && typeof request.token === 'string' && typeof request.signature === 'string') {
+            lastRequest = request;
+          }
+          switched = true;
+        }
+      }
+    } catch {}
+    try {
+      const saved = localStorage.getItem(draftKey);
+      savedButton.hidden = !saved;
+      if (saved && !receivedShare && !switched && !params.has('kind') && !params.has('place')) {
+        restoreDraft(JSON.parse(saved));
+        notice.textContent = copy.loaded;
+      }
+    } catch {}
+    update();
+  }
+</script>

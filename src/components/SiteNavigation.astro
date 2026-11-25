@@ -21,11 +21,11 @@ const links = [
   ['Insights', path('insights/'), labels.insights, 'en'],
   ['Language', languageHref, labels.language, languageHref.startsWith('#') ? locale : 'en'],
 ];
-const contributeHref = path('contribute/');
+const contributeHref = localizedPath('contribute/',locale);
 ---
 <nav class={`navigation-${variant}`} aria-label={labels.mainNav}>
   {links.map(([section, destination, label, language]) => (
     <a href={destination} hreflang={language} aria-current={pathname === destination ? 'page' : activeSection === section ? 'true' : undefined}>{label}</a>
   ))}
-  <a class="button small" href={contributeHref} hreflang="en" aria-current={pathname === contributeHref ? 'page' : undefined}>{labels.contribute} <Icon name="arrow" size={16} /></a>
+  <a class="button small" href={contributeHref} hreflang={locale} aria-current={pathname === contributeHref ? 'page' : undefined}>{labels.contribute} <Icon name="arrow" size={16} /></a>
 </nav>
