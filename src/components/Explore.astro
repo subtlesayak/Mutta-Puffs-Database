@@ -1,6 +1,6 @@
 ---
 import {atlas} from '../lib/catalogue';
-import {github, localizedPath, path, providerLabels} from '../lib/format';
+import {github, localizedPath, providerLabels} from '../lib/format';
 import Icon from './Icon.astro';
 import MetricFilters from './MetricFilters.astro';
 import PlaceCard from './PlaceCard.astro';
@@ -57,7 +57,7 @@ const cities = atlas.cities.filter(city => city.centre).sort((a,b) => a.name.loc
     <noscript><p class="muted">{copy.noScript}</p><div class="actions"><a href={localizedPath('cities/',locale)}>{copy.cityDirectory}</a><a href={github + '/blob/main/analysis/PLACES.md'}>{copy.fullList}</a></div></noscript>
     <div class="result-bar">
       <p class="muted" data-result-status role="status"></p>
-      <a class="text-link" href={path('map/')} data-map-view><Icon name="map" size={18} /> {t.mapView}</a>
+      <a class="text-link" href={localizedPath('map/',locale)} data-map-view><Icon name="map" size={18} /> {t.mapView}</a>
     </div>
     <ul class="place-grid" data-results>{atlas.places.slice(0,6).map(place => <PlaceCard place={place} locale={locale} />)}</ul>
     <div class="actions pagination" data-pagination hidden>

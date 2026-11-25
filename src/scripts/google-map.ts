@@ -1,9 +1,10 @@
 import {importLibrary, setOptions} from '@googlemaps/js-api-loader';
 import {MarkerClusterer} from '@googlemaps/markerclusterer';
 import type {Feature, Point} from 'geojson';
+import type {Locale} from '../lib/locales';
 
 export interface GooglePin {id: string; name: string}
-export interface GoogleConfig {key: string; mapId: string}
+export interface GoogleConfig {key: string; mapId: string; language: Locale}
 
 export async function openGoogleMap<T extends GooglePin>(
   element: HTMLElement,
@@ -13,7 +14,7 @@ export async function openGoogleMap<T extends GooglePin>(
 ) {
   const windowWithAuth = window as Window & {gm_authFailure?: () => void};
   windowWithAuth.gm_authFailure = onAuthFailure;
-  setOptions({key:config.key, v:'quarterly', mapIds:[config.mapId], authReferrerPolicy:'origin'});
+  setOptions({key:config.key, language:config.language, v:'quarterly', mapIds:[config.mapId], authReferrerPolicy:'origin'});
   const [{Map, InfoWindow}, {AdvancedMarkerElement}] = await Promise.all([
     importLibrary('maps') as Promise<google.maps.MapsLibrary>,
     importLibrary('marker') as Promise<google.maps.MarkerLibrary>,

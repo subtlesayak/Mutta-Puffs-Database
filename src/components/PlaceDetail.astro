@@ -58,7 +58,7 @@ const seo = {'@context':'https://schema.org','@type':'Place',name:place.name,des
         {links.length ?
           <div class="actions">{links.map(([provider,link]) => <a class="button secondary" data-directions={provider} href={link} target="_blank" rel="noopener noreferrer">{providerLabels[provider]} <Icon name="external" size={16} /></a>)}</div>
           : <p class="muted">{finder.mapUnavailable}</p>}
-        {place.location.latitude !== null && <a class="text-link" href={path('map/?place=' + place.id)} hreflang="en">{copy.showPin} <Icon name="arrow" size={16} /></a>}
+        {place.location.latitude !== null && <a class="text-link" href={localizedPath('map/?place=' + place.id,locale)}>{copy.showPin} <Icon name="arrow" size={16} /></a>}
         {place.location.accuracy === 'estimated' && <p class="muted">{copy.estimated}</p>}
       </section>
       <section class="panel">

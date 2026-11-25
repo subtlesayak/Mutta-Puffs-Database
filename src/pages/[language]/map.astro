@@ -1,0 +1,11 @@
+---
+import PuffMap from '../../components/PuffMap.astro';
+import {locales, type Locale} from '../../lib/locales';
+
+export function getStaticPaths() {
+  return locales.filter(({id}) => id !== 'en').map(({id}) => ({params:{language:id},props:{locale:id}}));
+}
+interface Props {locale: Locale}
+const {locale} = Astro.props;
+---
+<PuffMap locale={locale} />

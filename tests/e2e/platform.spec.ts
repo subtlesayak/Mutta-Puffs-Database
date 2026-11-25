@@ -60,6 +60,37 @@ test('localized city directories lead to localized listings and keep the same li
   }
 });
 
+test('localized maps keep city and district filters across languages and link back to localized listings', async ({page,baseURL}) => {
+  for (const [locale,title,city,district] of [
+    ['ml','പഫ് ഭൂപടം','ഹൈദരാബാദ്','ഹൈദരാബാദ് · തെലങ്കാന'],
+    ['hi','पफ का नक्शा','हैदराबाद','हैदराबाद · तेलंगाना'],
+    ['ta','பஃப் வரைபடம்','ஹைதராபாத்','ஹைதராபாத் · தெலங்கானா'],
+    ['kn','ಪಫ್ ನಕ್ಷೆ','ಹೈದರಾಬಾದ್','ಹೈದರಾಬಾದ್ · ತೆಲಂಗಾಣ'],
+  ]) {
+    await page.goto(locale + '/?city=hyderabad');
+    await expect(page.locator('[name=city]')).toHaveValue('hyderabad');
+    const finderView = page.locator('[data-map-view]');
+    await expect(finderView).toHaveAttribute('href',new URL(locale + '/map/?city=hyderabad',baseURL!).pathname + '?city=hyderabad');
+    const url = new URL((await finderView.getAttribute('href'))!,baseURL!);
+    url.searchParams.set('district','Hyderabad · Telangana');
+    url.searchParams.set('verification','unverified');
+    url.searchParams.set('view','list');
+    url.searchParams.set('unrelated','test');
+    await page.goto(url.href);
+    await expect(page.getByRole('heading',{level:1})).toHaveText(title);
+    await expect(page.locator('[name=city] option:checked')).toHaveText(city);
+    await expect(page.locator('[name=district] option:checked')).toHaveText(district);
+    const listing = page.locator('[data-map-list]').getByRole('link',{name:"Sam's Bakers",exact:true});
+    await expect(listing).toHaveAttribute('href',new URL(locale + '/places/' + examplePlace + '/',baseURL!).pathname);
+    await page.locator('#page-languages').getByRole('link',{name:'English',exact:true}).click();
+    await expect(page.locator('[data-map-list]')).toBeVisible();
+    expect(new URL(page.url()).pathname).toBe(new URL('map/',baseURL!).pathname);
+    expect(Object.fromEntries(new URL(page.url()).searchParams)).toEqual({
+      city:'hyderabad',district:'Hyderabad · Telangana',verification:'unverified',view:'list',
+    });
+  }
+});
+
 test('GPX pit stops find a nearby published listing', async ({page,request}) => {
   const response = await request.get('api/v1/places.json');
   const {places} = await response.json();
@@ -174,6 +205,9 @@ test.describe('PWA',()=>{
       await expect(page.locator('[data-results]')).toContainText("Sam's Bakers");
       await page.goto('ml/cities/');
       await expect(page.getByRole('heading',{name:'ഒരു നഗരം തിരഞ്ഞെടുക്കുക',exact:true})).toBeVisible();
+      await page.goto('ml/map/?view=list&city=hyderabad');
+      await expect(page.getByRole('heading',{name:'പഫ് ഭൂപടം',exact:true})).toBeVisible();
+      await expect(page.locator('[data-map-list]')).toContainText("Sam's Bakers");
     } finally {
       await context.setOffline(false);
     }
