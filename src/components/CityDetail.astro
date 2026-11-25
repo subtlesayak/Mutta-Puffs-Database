@@ -7,11 +7,15 @@ import type {City} from '../lib/types';
 import type {Locale} from '../lib/locales';
 import {formatMessage, localizedPath} from '../lib/format';
 import {directoryCopy, directoryCount} from '../lib/directory-copy';
+import {missionCopy} from '../lib/mission-copy';
+import {placeMissions} from '../lib/verification-missions';
 import {translatedPlaceName} from '../lib/place-search';
 
 interface Props {city: City; locale?: Locale}
 const {city,locale = 'en'} = Astro.props;
 const places = city.place_ids.map(id => byId.get(id)!).sort((a,b) => a.name.localeCompare(b.name));
+const missions = new Set(places.flatMap(placeMissions));
+const missionRoute = 'missions/?' + new URLSearchParams({area:city.name,mission:missions.has('pin') ? 'pin' : 'details'});
 const copy = directoryCopy[locale];
 const localName = (name: string) => translatedPlaceName(name,locale);
 const location = [city.state,city.country].flatMap(name => name ? [localName(name)] : []).join(', ');
@@ -27,6 +31,7 @@ const title = formatMessage(copy.cityHeading,fields);
       <div class="actions city-actions">
         <a class="button" href={localizedPath('map/?city=' + city.id,locale)}><Icon name="map" size={18} /> {copy.cityMap}</a>
         {city.centre && <a class="button secondary" href={localizedPath('?city=' + city.id + '#nearby',locale)}><Icon name="location" size={18} /> {formatMessage(copy.searchCity,fields)}</a>}
+        {missions.size > 0 && <a class="text-link" href={localizedPath(missionRoute,locale)}>{missionCopy[locale].title}</a>}
       </div>
     </header>
     <ul class="place-grid">{places.map(place => <PlaceCard place={place} locale={locale} />)}</ul>

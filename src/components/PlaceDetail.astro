@@ -5,6 +5,8 @@ import {atlas} from '../lib/catalogue';
 import {cityPath, formatDate, formatMessage, formatPrice, localizedPath, locality, path, providerLabels} from '../lib/format';
 import {directoryCopy} from '../lib/directory-copy';
 import {finderCopy} from '../lib/finder-copy';
+import {missionCopy} from '../lib/mission-copy';
+import {missionDraftRoute, placeMissions} from '../lib/verification-missions';
 import {translatedPlaceName} from '../lib/place-search';
 import type {Locale} from '../lib/locales';
 import type {Place, Provider, Review} from '../lib/types';
@@ -13,6 +15,7 @@ interface Props {place: Place; locale?: Locale}
 const {place,locale = 'en'} = Astro.props;
 const copy = directoryCopy[locale];
 const finder = finderCopy[locale];
+const missions = placeMissions(place);
 const localName = (name: string) => translatedPlaceName(name,locale);
 const numbers = new Intl.NumberFormat(locale === 'en' ? 'en-IN' : locale);
 const date = (value: string) => formatDate(value,locale === 'en' ? 'en-GB' : locale);
@@ -91,7 +94,10 @@ const seo = {'@context':'https://schema.org','@type':'Place',name:place.name,des
         <p>{place.source.kind === 'original_maps_export' ? copy.sourceExport : copy.sourceCommunity}{place.source.source_row ? ' · ' + formatMessage(copy.row,{number:numbers.format(place.source.source_row)}) : ''}</p>
         {place.source.reference && <p><a href={place.source.reference}>{copy.original}</a></p>}
         {place.verification.last_verified && <p>{formatMessage(copy.verifiedOn,{date:date(place.verification.last_verified)})}{place.verification.reference && <> · <a href={place.verification.reference}>{copy.evidence}</a></>}</p>}
-        <a class="text-link" href={localizedPath('contribute/?kind=correction&place=' + place.id,locale)}>{copy.correct} <Icon name="arrow" size={16} /></a>
+        <div class="actions">
+          <a class="text-link" href={localizedPath('contribute/?kind=correction&place=' + place.id,locale)}>{copy.correct} <Icon name="arrow" size={16} /></a>
+          {missions.map(mission => <a class="text-link" data-mission-link={mission} href={localizedPath(missionDraftRoute(place.id,mission),locale)}>{missionCopy[locale].labels[mission]}</a>)}
+        </div>
       </section>
     </div>
   </div>

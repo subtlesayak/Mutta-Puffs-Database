@@ -12,6 +12,8 @@ Start with the [contribution page](https://subtlesayak.github.io/Mutta-Puffs-Dat
 
 Location estimates and source pins are separate from independently verified coordinates. A submitted issue remains a proposal until a maintainer reviews the evidence and merges a record.
 
+Use the [verification missions](https://subtlesayak.github.io/Mutta-Puffs-Database/missions/) to add missing details or check a map pin. Both tasks ask for the visit date and what you checked. Pin checks also ask for the public shop pin. For a pin-check receipt to show as published, the public record must include the matching issue or PR, the visit date, and independently verified coordinates.
+
 ## Optional community service
 
 The atlas always offers GitHub issue drafts. To also accept contributions without a GitHub account and offer encrypted Passport sync, run `npm run community` with Node 24 and a persistent SQLite directory. Set `MPDB_DATABASE_PATH` to the database file, `MPDB_ALLOWED_ORIGINS` to the browser origin (for GitHub Pages, `https://subtlesayak.github.io`), and `MPDB_MODERATOR_TOKEN` to a private random secret of at least 32 bytes.

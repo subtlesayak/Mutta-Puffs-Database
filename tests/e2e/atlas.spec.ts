@@ -141,7 +141,7 @@ test('localized corrections preserve place IDs and native-script draft text acro
   ]) {
     const id = 'mpdb-7b2be6dd7ad3';
     await page.goto(locale + '/places/' + id + '/');
-    await page.locator('a[href*="kind=correction"]').click();
+    await page.locator('a[href*="kind=correction"]:not([data-mission-link])').click();
     expect(new URL(page.url()).pathname).toBe(new URL(locale + '/contribute/',baseURL!).pathname);
     await expect(page.locator('html')).toHaveAttribute('lang',locale);
     await expect(page.locator('[name=place_id]')).toHaveValue(id);
@@ -175,6 +175,50 @@ test('all homepages link straight to Puff Heritage chapters', async ({page, base
   await page.locator('#puff-heritage').getByRole('link').filter({hasText: 'ಪಫ್ ಮಾಡುವ ವಿಧಾನ'}).click();
   await expect(page).toHaveURL(new URL('heritage/#recipe', baseURL!).href);
   await expect(page.getByRole('heading', {name: 'Make Kerala-style egg puffs'})).toBeInViewport();
+});
+
+test('a city pin mission carries its task, visit date and pasted pin into the GitHub draft', async ({page,context,baseURL}) => {
+  await context.route('https://github.com/subtlesayak/Mutta-Puffs-Database/issues/new**',route =>
+    route.fulfill({status:200,contentType:'text/html',body:'<title>Unsubmitted verification draft</title>'}));
+  await page.goto('ml/cities/hyderabad/');
+  await page.locator('.city-actions a[href*="missions/"]').click();
+  await expect(page.locator('html')).toHaveAttribute('lang','ml');
+  await expect(page.locator('[name=area]')).toHaveValue('Hyderabad');
+  await expect(page.locator('[name=mission]')).toHaveValue('pin');
+  await page.locator('#page-languages').getByRole('link',{name:'English',exact:true}).click();
+  await expect(page).toHaveURL(new URL('missions/?area=Hyderabad&mission=pin',baseURL!).href);
+  const card = page.locator('[data-mission-card=pin]:visible').filter({has:page.getByRole('link',{name:"Sam's Bakers",exact:true})});
+  await card.getByRole('link',{name:'Report what you checked',exact:true}).click();
+  await expect(page.locator('[name=place_id]')).toHaveValue('mpdb-7b2be6dd7ad3');
+  await expect(page.locator('[data-mission-help=pin]')).toBeVisible();
+  const evidence = page.getByLabel('Corrected pin or evidence link');
+  const date = page.getByLabel('Date you checked the place');
+  await expect(evidence).toHaveAttribute('required','');
+  await expect(date).toHaveAttribute('required','');
+  const pin = 'https://maps.google.com/?q=17.4,78.4';
+  await page.getByLabel('Paste a Maps link or pin').fill(pin);
+  await page.getByRole('button',{name:'Fill the draft'}).click();
+  await expect(evidence).toHaveValue(pin);
+  await date.fill('2026-01-01');
+  const observation = 'I checked the storefront during a visit.';
+  await page.getByLabel('What needs to change?').fill(observation);
+  await page.locator('#page-languages').getByRole('link',{name:'മലയാളം',exact:true}).click();
+  await expect(page.locator('[data-mission-help=pin]')).toBeVisible();
+  await expect(page.locator('[name=correction]')).toHaveValue(observation);
+  await expect(page.locator('[name=verified_on]')).toHaveValue('2026-01-01');
+  await expect(page.locator('[name=evidence]')).toHaveValue(pin);
+  await page.locator('#page-languages').getByRole('link',{name:'English',exact:true}).click();
+  const opening = page.waitForEvent('popup');
+  await page.getByRole('button',{name:'Continue on GitHub'}).click();
+  const popup = await opening;
+  await popup.waitForLoadState('domcontentloaded');
+  const body = new URL(popup.url()).searchParams.get('body');
+  expect(body).toContain('> Check a map pin');
+  expect(body).toContain('> mpdb-7b2be6dd7ad3');
+  expect(body).toContain('> ' + observation);
+  expect(body).toContain('> 2026-01-01');
+  expect(body).toContain(pin);
+  await popup.close();
 });
 
 test('the Guide and Heritage pass automated accessibility and reflow checks', async ({page, isMobile}) => {

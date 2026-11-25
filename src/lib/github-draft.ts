@@ -1,10 +1,12 @@
+import {isVerificationMission, missionLabels} from './verification-missions.ts';
+
 const fields = {
   place: [
     ['place_name','Shop or stall name'], ['area','City, state and neighbourhood'],
     ['map_link','Public map link'], ['details','First-hand notes'],
   ],
   correction: [
-    ['place_id','Atlas place ID'], ['correction','What should change?'],
+    ['place_id','Atlas place ID'], ['mission','Verification task'], ['correction','What should change?'],
     ['evidence','Corrected public pin or reference'], ['verified_on','Date you checked the place'],
   ],
   review: [
@@ -41,7 +43,8 @@ export function githubDraft(repo: string, kind: ContributionKind, title: string,
   for (const [name,label] of fields[kind]) {
     const value = data.get(name);
     if (typeof value !== 'string' || !value.trim()) continue;
-    const quoted = value.trim().split(/\r\n?|\n/).map(line => '> ' + line).join('\n');
+    const text = name === 'mission' && isVerificationMission(value) ? missionLabels[value] : value.trim();
+    const quoted = text.split(/\r\n?|\n/).map(line => '> ' + line).join('\n');
     bodySections.push('### ' + label + '\n\n' + quoted);
   }
   if (kind === 'photo' && !String(data.get('photo_url') ?? '').trim()) {
