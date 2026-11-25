@@ -1,6 +1,6 @@
 import {createHash, createHmac, randomBytes, timingSafeEqual} from 'node:crypto';
 import {createServer} from 'node:http';
-import {mkdirSync} from 'node:fs';
+import {mkdirSync, readFileSync} from 'node:fs';
 import {isIP} from 'node:net';
 import {dirname, resolve} from 'node:path';
 import {DatabaseSync} from 'node:sqlite';
@@ -67,6 +67,10 @@ export function openCommunityDatabase(filename) {
     );
   `);
   return db;
+}
+
+export function communityDatabasePath() {
+  return resolve(process.env.MPDB_DATABASE_PATH ?? '.community/atlas.sqlite');
 }
 
 export function createCommunityServer({db, origins, moderatorToken, trustLocalProxy = false}) {
@@ -225,14 +229,23 @@ export function createCommunityServer({db, origins, moderatorToken, trustLocalPr
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
-  const filename = resolve(process.env.MPDB_DATABASE_PATH ?? '.community/atlas.sqlite');
+  const filename = communityDatabasePath();
+  const secretFile = process.env.MPDB_MODERATOR_TOKEN_FILE;
+  const moderatorToken = secretFile ? readFileSync(secretFile,'utf8').trim() : process.env.MPDB_MODERATOR_TOKEN;
+  process.umask(0o077);
   mkdirSync(dirname(filename), {recursive:true, mode:0o700});
   const origins = (process.env.MPDB_ALLOWED_ORIGINS ?? '').split(',').map(origin => origin.trim()).filter(Boolean);
+  const db = openCommunityDatabase(filename);
   const server = createCommunityServer({
-    db:openCommunityDatabase(filename), origins, moderatorToken:process.env.MPDB_MODERATOR_TOKEN,
+    db, origins, moderatorToken,
     trustLocalProxy:process.env.MPDB_TRUST_LOCAL_PROXY === '1',
   });
   const port = Number(process.env.PORT ?? '8787');
   const host = process.env.MPDB_HOST ?? '127.0.0.1';
-  server.listen(port, host, () => console.log('Community API listening at http://' + host + ':' + port));
+  server.once('close', () => db.close());
+  for (const signal of ['SIGINT', 'SIGTERM']) process.once(signal, () => server.close());
+  server.listen(port, host, () => {
+    const address = server.address();
+    if (address && typeof address !== 'string') console.log('Community API listening on port ' + address.port);
+  });
 }

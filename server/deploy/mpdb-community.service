@@ -1,0 +1,23 @@
+[Unit]
+Description=Mutta Puffs community API
+After=network.target
+
+[Service]
+Type=exec
+DynamicUser=yes
+WorkingDirectory=/opt/mutta-puffs-database
+StateDirectory=mpdb-community
+StateDirectoryMode=0700
+UMask=0077
+Environment=MPDB_DATABASE_PATH=/var/lib/mpdb-community/atlas.sqlite
+Environment=MPDB_ALLOWED_ORIGINS=https://subtlesayak.github.io
+Environment=MPDB_MODERATOR_TOKEN_FILE=%d/moderator-token
+EnvironmentFile=-/etc/mpdb-community/community.env
+LoadCredential=moderator-token:/etc/mpdb-community/moderator-token
+ExecStart=/usr/bin/node /opt/mutta-puffs-database/server/community.mjs
+Restart=on-failure
+RestartSec=5s
+TimeoutStopSec=20s
+
+[Install]
+WantedBy=multi-user.target
