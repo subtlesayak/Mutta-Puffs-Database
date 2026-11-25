@@ -198,7 +198,7 @@ test.describe('PWA',()=>{
     await expect.poll(()=>page.evaluate(()=>Boolean(navigator.serviceWorker.controller))).toBe(true);
     try {
       await context.setOffline(true);
-      const link = feature.getByRole('link',{name:'Explore Puff Heritage'});
+      const link = feature.getByRole('link',{name:'Read the full story',exact:true});
       await link.press('Enter');
       await expect(page.getByRole('heading',{name:'The story of the egg puff',exact:true})).toBeVisible();
     } finally {

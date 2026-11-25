@@ -161,6 +161,22 @@ test('localized corrections preserve place IDs and native-script draft text acro
   }
 });
 
+test('all homepages link straight to Puff Heritage chapters', async ({page, baseURL}) => {
+  const heritagePath = new URL('heritage/', baseURL!).pathname;
+  for (const route of ['./', 'ml/', 'hi/', 'ta/', 'kn/']) {
+    await page.goto(route);
+    const feature = page.locator('#puff-heritage');
+    await expect(feature.getByRole('heading', {level: 2})).toBeVisible();
+    const links = feature.getByRole('link');
+    await expect(links).toHaveCount(5);
+    expect(await links.evaluateAll(anchors => anchors.map(anchor => anchor.getAttribute('href'))))
+      .toEqual(['', '#name', '#origins', '#recipe', '#travels'].map(fragment => heritagePath + fragment));
+  }
+  await page.locator('#puff-heritage').getByRole('link').filter({hasText: 'ಪಫ್ ಮಾಡುವ ವಿಧಾನ'}).click();
+  await expect(page).toHaveURL(new URL('heritage/#recipe', baseURL!).href);
+  await expect(page.getByRole('heading', {name: 'Make Kerala-style egg puffs'})).toBeInViewport();
+});
+
 test('the Guide and Heritage pass automated accessibility and reflow checks', async ({page, isMobile}) => {
   await page.goto('guide/');
   if (isMobile) {

@@ -1,6 +1,7 @@
 ---
 import Base from '../../layouts/Base.astro';
 import Explore from '../../components/Explore.astro';
+import HeritageFeature from '../../components/HeritageFeature.astro';
 import Icon from '../../components/Icon.astro';
 import {labelSets, locales, type Locale} from '../../lib/locales';
 
@@ -18,5 +19,6 @@ const labels = labelSets[locale];
     <p>{labels.intro}</p>
     <a class="text-link" href="#find-nearby" data-find-nearby><Icon name="location" size={18} /> {labels.useLocation}</a>
   </header>
+  <HeritageFeature locale={locale} />
   <Explore locale={locale} />
 </Base>
