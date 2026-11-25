@@ -4,9 +4,11 @@ import {path, localizedPath, cityPath, placePath, siteUrl} from '../lib/format';
 import {locales} from '../lib/locales';
 
 export const GET: APIRoute = () => {
-  const pages = ['guide/', 'insights/', 'about/', 'leaderboard/', 'price-index/', 'trails/', 'passport/', 'wrapped/', 'roulette/', 'heritage/', 'languages/'].map(path);
+  const pages = ['insights/', 'about/', 'leaderboard/', 'price-index/', 'trails/', 'passport/', 'wrapped/', 'roulette/', 'heritage/', 'languages/'].map(path);
   for (const {id:locale} of locales) {
-    pages.push(localizedPath('',locale), localizedPath('cities/',locale), localizedPath('map/',locale), localizedPath('contribute/',locale), localizedPath('missions/',locale));
+    for (const route of ['', 'cities/', 'map/', 'contribute/', 'missions/', 'guide/']) {
+      pages.push(localizedPath(route,locale));
+    }
     pages.push(...atlas.cities.map(city => cityPath(city.id,locale)), ...atlas.places.map(place => placePath(place.id,locale)));
   }
   pages.push(...atlas.trails.map(trail => path('trails/' + trail.id + '/')));
