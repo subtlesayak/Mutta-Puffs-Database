@@ -2,6 +2,13 @@ import {distanceKm} from './distance.ts';
 
 export type Coordinate = [latitude: number, longitude: number];
 export interface RoutePoint {location: Coordinate; distanceAlong: number; bearing: number; length: number; end: Coordinate}
+export interface PitStopSearch {
+  segments: Coordinate[][];
+  pins: (Coordinate | null)[];
+  radius: number;
+}
+interface PitStopMatch {index: number; offset: number; distanceAlong: number}
+export type PitStopResult = {matches: PitStopMatch[]} | {error: string};
 const earth = 6371;
 const rad = Math.PI / 180;
 
@@ -73,4 +80,15 @@ export function nearestRoutePoint(place: Coordinate, route: RoutePoint[]) {
     if (offset < nearest.offset) nearest = {offset,distanceAlong};
   }
   return nearest;
+}
+
+export function searchPitStops({segments,pins,radius}: PitStopSearch): PitStopResult {
+  const route = routeSegments(segments);
+  if (!route.length) return {error:'The route needs at least two different coordinates.'};
+  const matches = pins.flatMap((point,index) => {
+    if (!point) return [];
+    const closest = nearestRoutePoint(point,route);
+    return closest.offset <= radius ? [{index,...closest}] : [];
+  }).sort((a,b) => a.distanceAlong - b.distanceAlong || a.offset - b.offset);
+  return {matches};
 }

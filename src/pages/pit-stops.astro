@@ -31,7 +31,7 @@ import Base from '../layouts/Base.astro';
   }
 </style>
 <script>
-  import {nearestRoutePoint,readGpx,routeSegments} from '../lib/routes';
+  import {readGpx, searchPitStops, type Coordinate, type PitStopSearch, type PitStopResult} from '../lib/routes';
   import {formatNumber,locality,path,placeCount,placePath} from '../lib/format';
   import type {Place} from '../lib/types';
 
@@ -44,33 +44,55 @@ import Base from '../layouts/Base.astro';
   const list = root.querySelector<HTMLElement>('[data-route-results]')!;
   let places: Place[] | undefined;
 
+  async function searchRoute(query: PitStopSearch) {
+    let worker: Worker | undefined;
+    try {
+      const search = new Worker(new URL('../scripts/pit-stops-worker.ts',import.meta.url),{type:'module'});
+      worker = search;
+      return await new Promise<PitStopResult>((resolve,reject) => {
+        search.onmessage = ({data}: MessageEvent<PitStopResult>) => resolve(data);
+        search.onerror = reject;
+        search.onmessageerror = reject;
+        search.postMessage(query);
+      });
+    } catch {
+      return searchPitStops(query);
+    } finally {
+      worker?.terminate();
+    }
+  }
+
   form.addEventListener('submit',async event => {
     event.preventDefault();
     const file = input.files?.[0];
-    if (!file) return;
+    if (!file || submit.disabled) return;
+    const limit = Number(radius.value);
     submit.disabled = true;
     list.replaceChildren();
     status.textContent = 'Checking stops along your route…';
     try {
       if (file.size > 2 * 1024 * 1024) throw new Error('Choose a GPX file smaller than 2 MB.');
-      const route = routeSegments(readGpx(await file.text()));
-      if (!route.length) throw new Error('The route needs at least two different coordinates.');
+      const segments = readGpx(await file.text());
       if (!places) {
         const response = await fetch(path('api/v1/places.json'));
         if (!response.ok) throw new Error('Could not load the atlas. Try again when online.');
         ({places} = await response.json());
       }
-      const limit = Number(radius.value);
-      const nearby = (places ?? []).flatMap(place => {
-        const {latitude,longitude} = place.location;
-        if (latitude === null || longitude === null) return [];
-        const closest = nearestRoutePoint([latitude,longitude],route);
-        return closest.offset <= limit ? [{place,...closest}] : [];
-      }).sort((a,b) => a.distanceAlong - b.distanceAlong || a.offset - b.offset);
+      const catalogue = places ?? [];
+      const pins = catalogue.map(({location:{latitude,longitude}}): Coordinate | null =>
+        latitude === null || longitude === null ? null : [latitude,longitude]);
+      const result = await searchRoute({segments,pins,radius:limit});
+      if (input.files?.[0] !== file || Number(radius.value) !== limit) {
+        status.textContent = '';
+        return;
+      }
+      if ('error' in result) throw new Error(result.error);
+      const nearby = result.matches;
       status.textContent = nearby.length
         ? placeCount(nearby.length) + ' along the route. Distances are approximate and use the atlas pins.'
         : 'No saved places within ' + limit + ' km. Try a wider search distance.';
-      for (const {place,offset,distanceAlong} of nearby) {
+      for (const {index,offset,distanceAlong} of nearby) {
+        const place = catalogue[index];
         const item = document.createElement('li');
         item.className = 'place-card';
         const heading = document.createElement('h2');
