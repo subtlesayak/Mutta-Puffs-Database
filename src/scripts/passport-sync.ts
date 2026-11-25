@@ -1,7 +1,7 @@
 import {communityRequest} from '../lib/community';
-import {mergePassportBackups} from '../lib/passport-backup';
+import {mergeSyncedPassports} from '../lib/passport-backup';
 import {newSyncCode,openPassportSnapshot,sealPassport,syncAccess,type SyncSnapshot} from '../lib/passport-sync';
-import {changePassport,readPassport,type Passport} from '../lib/passport';
+import {writePassport,readPassport,type Passport} from '../lib/passport';
 import type {PlaceAliases} from '../lib/place-identity';
 
 export function startPassportSync(root: HTMLElement, aliases: PlaceAliases, render: (passport: Passport) => void) {
@@ -34,7 +34,7 @@ export function startPassportSync(root: HTMLElement, aliases: PlaceAliases, rend
     }
   });
   remove.addEventListener('click', async () => {
-    remove.disabled = true;
+    remove.disabled = sync.disabled = newKey.disabled = true;
     try {
       const {id,token} = await syncAccess(key.value.trim());
       await communityRequest('v1/passport-sync/' + id,{method:'DELETE',token});
@@ -42,30 +42,28 @@ export function startPassportSync(root: HTMLElement, aliases: PlaceAliases, rend
     } catch (error) {
       status.textContent = error instanceof Error ? error.message : 'Could not remove the backup.';
     } finally {
-      remove.disabled = false;
+      remove.disabled = sync.disabled = newKey.disabled = false;
     }
   });
   form.addEventListener('submit', async event => {
     event.preventDefault();
-    sync.disabled = newKey.disabled = true;
+    sync.disabled = newKey.disabled = remove.disabled = true;
     status.textContent = 'Syncing your encrypted backup…';
     try {
       const {id,token,key:secret} = await syncAccess(key.value.trim());
       const route = 'v1/passport-sync/' + id;
       const snapshot = await communityRequest<SyncSnapshot>(route,{token});
       const remote = await openPassportSnapshot(snapshot,secret,aliases);
-      const contents = mergePassportBackups(readPassport(localStorage,aliases),remote);
+      const contents = mergeSyncedPassports(readPassport(localStorage,aliases),remote);
       const sealed = await sealPassport(contents,secret,snapshot.revision);
       await communityRequest(route,{method:'PUT',token,body:sealed});
-      const updated = changePassport(localStorage,passport => {
-        Object.assign(passport,mergePassportBackups(passport,contents));
-      },aliases);
+      const updated = writePassport(localStorage,mergeSyncedPassports(readPassport(localStorage,aliases),contents));
       render(updated);
-      status.textContent = 'Encrypted backup synced and new records added to this device.';
+      status.textContent = 'Encrypted backup synced.';
     } catch (error) {
       status.textContent = error instanceof Error ? error.message : 'Could not sync your passport.';
     } finally {
-      sync.disabled = newKey.disabled = false;
+      sync.disabled = newKey.disabled = remove.disabled = false;
     }
   });
 }

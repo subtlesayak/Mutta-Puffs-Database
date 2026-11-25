@@ -1,8 +1,9 @@
 import {randomBytes} from 'node:crypto';
-import {expect, test, type Route} from '@playwright/test';
+import {expect, test, type Page, type Route} from '@playwright/test';
 import {createCommunityServer,openCommunityDatabase} from '../../server/community.mjs';
 
 test('account-free submissions, moderation, and encrypted Passport sync', async ({page,context,baseURL,browser}) => {
+  test.setTimeout(60_000);
   const moderator = randomBytes(32).toString('base64url');
   const db = openCommunityDatabase(':memory:');
   const source = 'https://github.com/subtlesayak/Mutta-Puffs-Database/issues/101';
@@ -106,6 +107,24 @@ test('account-free submissions, moderation, and encrypted Passport sync', async 
       await expect(other.getByText(note,{exact:true})).toHaveCount(0);
       await other.getByLabel('Private sync key').fill(key);
       await other.getByRole('button',{name:'Sync now'}).click();
+      await expect(other.getByText(note,{exact:true})).toBeVisible();
+
+      const syncAgain = async (view: Page) => {
+        const request = view.waitForResponse(response =>
+          response.url().includes('/v1/passport-sync/') && response.request().method() === 'PUT');
+        await view.getByRole('button',{name:'Sync now'}).click();
+        expect((await request).ok()).toBe(true);
+        await expect(view.locator('[data-sync-status]')).toContainText('Encrypted backup synced');
+      };
+      await page.getByRole('button',{name:/^Remove visit to /}).click();
+      await syncAgain(page);
+      await expect(other.getByText(note,{exact:true})).toBeVisible();
+      await syncAgain(other);
+      await expect(other.getByText(note,{exact:true})).toHaveCount(0);
+
+      await page.getByRole('button',{name:'Undo removal',exact:true}).click();
+      await syncAgain(page);
+      await syncAgain(other);
       await expect(other.getByText(note,{exact:true})).toBeVisible();
     } finally {
       await second.close();

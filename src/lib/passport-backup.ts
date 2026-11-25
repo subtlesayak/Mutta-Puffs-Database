@@ -1,6 +1,7 @@
 import type {Collection, Passport, Visit} from './passport.ts';
 import {resolvePlaceId} from './place-identity.ts';
 import type {PlaceAliases} from './place-identity.ts';
+import {mergePassportChanges,passportAtChanges,readPassportChanges} from './passport-changes.ts';
 
 export const passportBackupLimit = 2 * 1024 * 1024;
 const placeId = /^mpdb-[a-z0-9]{8,24}$/;
@@ -36,8 +37,9 @@ function parseVisit(value: unknown, aliases: PlaceAliases): Visit {
   return visit;
 }
 
-export function formatPassportBackup(passport: Passport): string {
-  return JSON.stringify({format:backupFormat, version:1, passport}, null, 2) + '\n';
+export function formatPassportBackup(passport: Passport, version: 1 | 2 = 1): string {
+  const {changes,...records} = passport;
+  return JSON.stringify({format:backupFormat,version,passport:version === 2 ? {...records,changes} : records}, null, 2) + '\n';
 }
 
 export function readPassportBackup(text: string, aliases: PlaceAliases = {}): Passport {
@@ -45,7 +47,7 @@ export function readPassportBackup(text: string, aliases: PlaceAliases = {}): Pa
   let source: Record<string, unknown> | null;
   try {source = record(JSON.parse(text));}
   catch {throw new Error('Choose a valid Puff Passport JSON backup.');}
-  if (source?.format !== backupFormat || source.version !== 1) throw new Error('Choose a supported Puff Passport backup.');
+  if (source?.format !== backupFormat || (source.version !== 1 && source.version !== 2)) throw new Error('Choose a supported Puff Passport backup.');
   const book = record(source.passport);
   if (!book || !Array.isArray(book.saved) || !Array.isArray(book.visits)) throw new Error('The backup is missing saved places or visits.');
   const saved = book.saved.map(id => {
@@ -68,7 +70,12 @@ export function readPassportBackup(text: string, aliases: PlaceAliases = {}): Pa
       return {id:item.id,name:item.name,placeIds:[...new Set(placeIds)]};
     });
   }
-  return mergePassportBackups({saved:[],visits:[]},result);
+  const merged = mergePassportBackups({saved:[],visits:[]},result);
+  if (source.version === 2) {
+    const changes = readPassportChanges(book.changes,aliases);
+    if (changes) return passportAtChanges({...merged,changes});
+  }
+  return merged;
 }
 
 export function mergePassportBackups(current: Passport, incoming: Passport): Passport {
@@ -92,4 +99,10 @@ export function mergePassportBackups(current: Passport, incoming: Passport): Pas
     merged.collections = [...collections.values()];
   }
   return merged;
+}
+
+export function mergeSyncedPassports(current: Passport, incoming: Passport): Passport {
+  const changes = mergePassportChanges(current.changes,incoming.changes);
+  const merged = mergePassportBackups(passportAtChanges(current,changes),passportAtChanges(incoming,changes));
+  return changes ? {...merged,changes} : merged;
 }
