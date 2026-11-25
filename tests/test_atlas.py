@@ -64,9 +64,56 @@ class AtlasTests(unittest.TestCase):
 
     def test_correction_cannot_replace_the_registered_source(self):
         place = copy.deepcopy(self.atlas["places"][0])
-        place["source"]["source_row"] += 1
+        place["source"]["import_key"] = "cid:bad"
         with self.assertRaisesRegex(ValueError, "preserve import provenance"):
             merge_places(self.atlas["places"], [place])
+
+    def test_corrections_follow_a_refresh_and_keep_current_archive_provenance(self):
+        first = self.atlas["places"][0]
+        correction = copy.deepcopy(first)
+        correction["name"] = "Corrected name"
+        correction["verification"]["reference"] = "https://github.com/subtlesayak/Mutta-Puffs-Database/issues/1"
+        rows = [*self.rows[1:], self.rows[0]]
+        atlas = catalogue(rows, {**APPROVED, "places": [correction]})
+        found = next(place for place in atlas["places"] if place["id"] == first["id"])
+        self.assertEqual(found["name"], "Corrected name")
+        self.assertEqual(found["source"]["source_row"], len(rows) + 1)
+
+    def test_retargeted_link_requires_identity_registration(self):
+        first = self.atlas["places"][0]
+        alternate = "https://www.google.com/maps/search/?api=1&query=12.5,77.5"
+        rows = [{**self.rows[0], "URL": alternate}, *self.rows[1:]]
+        identities = {"schema_version": 1, "import_ids": {first["source"]["import_key"]: first["id"]}, "merges": {}}
+        with self.assertRaisesRegex(ValueError, "is missing"):
+            catalogue(rows, APPROVED, identities)
+        identities["import_ids"]["url:" + alternate] = first["id"]
+        refreshed = catalogue(rows, APPROVED, identities)
+        self.assertEqual(refreshed["places"][0]["id"], first["id"])
+        self.assertEqual(refreshed["places"][0]["source"]["reference"], alternate)
+
+    def test_duplicate_rows_stay_in_archive_with_one_place(self):
+        atlas = catalogue([*self.rows, self.rows[0]], APPROVED)
+        self.assertEqual(atlas["stats"]["archive"]["rows"], len(self.rows) + 1)
+        self.assertEqual(len(atlas["places"]), len(self.rows))
+
+    def test_reviewed_merge_moves_references_and_preserves_raw_rows(self):
+        retired, canonical, other = [place["id"] for place in self.atlas["places"][:3]]
+        reference = "https://github.com/subtlesayak/Mutta-Puffs-Database/issues/1"
+        identities = {"schema_version": 1, "import_ids": {}, "merges": {retired: {"place_id": canonical, "reference": reference}}}
+        observation = {"id": "observation-test", "place_id": retired, "observed_on": "2020-01-01",
+                       "source": reference, "price": {"amount": 20, "currency": "INR"}}
+        reviewed = {**APPROVED, "observations": [observation],
+                    "trails": [{"id": "trail-test", "name": "Test trail", "description": "Fixture", "place_ids": [retired, canonical, other]}]}
+        atlas = catalogue(self.rows, reviewed, identities)
+        self.assertEqual(atlas["stats"]["archive"]["rows"], len(self.rows))
+        self.assertEqual(len(atlas["places"]), len(self.rows) - 1)
+        self.assertEqual(atlas["place_aliases"], {retired: canonical})
+        self.assertEqual(atlas["observations"][0]["place_id"], canonical)
+        self.assertEqual(atlas["trails"][0]["place_ids"], [canonical, other])
+        self.assertEqual(observation["place_id"], retired)
+        identities["merges"][canonical] = {"place_id": retired, "reference": reference}
+        with self.assertRaisesRegex(ValueError, "Circular place merge"):
+            catalogue(self.rows, reviewed, identities)
 
     def test_review_and_observation_validation(self):
         first = self.atlas["places"][0]["id"]

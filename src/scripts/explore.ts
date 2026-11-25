@@ -1,14 +1,15 @@
 import Fuse from 'fuse.js';
-import {accuracyLabels, formatNumber, formatPrice, locality, openInMap, openInMapName, path, placeCount, placePath, providerLabels} from '../lib/format';
+import {accuracyLabels, formatNumber, formatPrice, locality, openInMap, openInMapName, path, placeCount, placePath} from '../lib/format';
 import {browserPosition, distanceKm} from '../lib/distance';
 import {metricMatcher} from '../lib/metric-filters';
 import {track} from './analytics';
+import {mapPreference,rememberMapProvider} from '../lib/map-preference';
+import {isLocale, labelSets} from '../lib/locales';
+import {placeNameAliases, searchText, translatedPlaceName} from '../lib/place-search';
 import type {Place, PlaceMetrics, Provider} from '../lib/types';
 
 const PAGE_SIZE = 24;
-const PROVIDER_KEY = 'mutta-puffs-map-provider';
 const km = new Intl.NumberFormat('en-IN', {maximumFractionDigits: 1});
-const variants: Record<string, string> = {Kozhikode: 'Calicut', Bengaluru: 'Bangalore', Kochi: 'Cochin', Mysuru: 'Mysore', Thiruvananthapuram: 'Trivandrum'};
 const districtKey = (p: Place) => p.location.district ? [p.location.district, p.location.state].filter(Boolean).join(' · ') : '';
 
 function make<K extends keyof HTMLElementTagNameMap>(tag: K, text = '', className = '') {
@@ -47,6 +48,9 @@ function card(place: Place, provider: Provider, distance: number | null, metric?
 }
 
 export async function startExplorer() {
+  const activeLanguage = document.documentElement.lang;
+  const locale = isLocale(activeLanguage) ? activeLanguage : 'en';
+  const labels = labelSets[locale];
   const root = document.querySelector<HTMLElement>('[data-explorer]');
   if (!root) return;
   const find = <T extends HTMLElement>(selector: string) => root.querySelector<T>(selector)!;
@@ -68,10 +72,9 @@ export async function startExplorer() {
   const pagination = find<HTMLElement>('[data-pagination]');
   const previous = find<HTMLButtonElement>('[data-previous]');
   const next = find<HTMLButtonElement>('[data-next]');
-  try {
-    const stored = localStorage.getItem(PROVIDER_KEY);
-    if (stored && Object.hasOwn(providerLabels, stored)) provider.value = stored;
-  } catch {}
+  const mapView = find<HTMLAnchorElement>('[data-map-view]');
+  const preferred = mapPreference();
+  if (preferred) provider.value = preferred;
 
   let places: Place[];
   let metrics: Record<string,PlaceMetrics> = {};
@@ -81,12 +84,13 @@ export async function startExplorer() {
     ({places} = await response.json());
     if (prices?.ok) ({place_metrics:metrics} = await prices.json());
   } catch {
-    status.textContent = 'Could not load the full list. Reload the page or open the city directory.';
+    status.textContent = labels.loadError;
     return;
   }
   const index = new Fuse(places.map(place => ({
-    place, name: place.name, area: locality(place.location), sourceNote: place.note,
-    variant: variants[place.location.city ?? ''],
+    place, name: searchText(place.name), area: searchText(locality(place.location)),
+    sourceNote: place.note ? searchText(place.note) : undefined,
+    variant: placeNameAliases([place.location.city,place.location.district,place.location.state,place.location.country]),
   })), {keys: [{name: 'name',weight: 3}, {name: 'area',weight: 2}, 'sourceNote', 'variant'], threshold: .35, ignoreLocation: true});
 
   function updateDistricts() {
@@ -94,8 +98,11 @@ export async function startExplorer() {
     const entries = places.filter(p => p.location.country === 'India' &&
       (!region.value || region.value === 'India' || p.location.state === region.value));
     const values = [...new Set(entries.map(districtKey).filter(Boolean))].sort();
-    district.replaceChildren(new Option('All districts',''), ...values.map(name => new Option(name)));
-    if (entries.some(p => !p.location.district)) district.add(new Option('District unassigned','unassigned'));
+    district.replaceChildren(new Option(labels.allDistricts,''), ...values.map(name => {
+      const display = name.split(' · ').map(part => translatedPlaceName(part,locale)).join(' · ');
+      return new Option(display,name);
+    }));
+    if (entries.some(p => !p.location.district)) district.add(new Option(labels.unassignedDistrict,'unassigned'));
     district.disabled = !entries.length;
     if ([...district.options].some(option => option.value === selected)) district.value = selected;
   }
@@ -105,7 +112,12 @@ export async function startExplorer() {
   let origin: {coords: [number, number]; label: string} | null = null;
   let noResultsTimer: ReturnType<typeof setTimeout> | undefined;
   function render() {
-    const query = search.value.trim();
+    const query = searchText(search.value);
+    const mapParams = new URLSearchParams();
+    if (city.value) mapParams.set('city', city.value);
+    if (region.value && region.value !== 'unassigned') mapParams.set('region', region.value);
+    if (district.value && district.value !== 'unassigned') mapParams.set('district', district.value);
+    mapView.href = path('map/' + (mapParams.size ? '?' + mapParams : ''));
     const matching = query ? index.search(query).map(hit => hit.item.place) : places;
     const matchesMetric = metricMatcher(form);
     const filtered = matching.filter(p =>
@@ -130,13 +142,18 @@ export async function startExplorer() {
     status.textContent = !distances.length
       ? 'No places match. ' + recovery
       : placeCount(distances.length) + (origin ? (Number.isFinite(limit) ? ' within ' + formatNumber(limit) + ' km of ' : ' sorted by distance from ') + origin.label : '');
+    if (locale !== 'en') {
+      status.textContent = distances.length
+        ? new Intl.NumberFormat(locale).format(distances.length) + ' ' + labels.places
+        : labels.empty;
+    }
     clearTimeout(noResultsTimer);
     if (!distances.length && query) noResultsTimer = setTimeout(() => track({name:'no_results'}),900);
     results.replaceChildren(...distances.slice(page * PAGE_SIZE,(page + 1)*PAGE_SIZE).map(({place,distance}) => card(place, provider.value as Provider,distance,metrics[place.id])));
     pagination.hidden = pages <= 1;
     previous.disabled = page === 0;
     next.disabled = page + 1 === pages;
-    find<HTMLElement>('[data-pages]').textContent = 'Page ' + (page + 1) + ' of ' + pages;
+    find<HTMLElement>('[data-pages]').textContent = labels.page + ' ' + (page + 1) + ' ' + labels.of + ' ' + pages;
   }
 
   function setOrigin(value: typeof origin, message = '') {
@@ -158,20 +175,25 @@ export async function startExplorer() {
   locate.addEventListener('click', () => {
     if (locate.getAttribute('aria-disabled') === 'true') return;
     if (!navigator.geolocation) {
-      locationStatus.textContent = 'Your browser could not share a location. Choose a city to find nearby places.';
+      locationStatus.textContent = labels.denied;
       return;
     }
     const pending = ++request;
     locate.setAttribute('aria-disabled', 'true');
     clearLocation.hidden = false;
-    locationStatus.textContent = 'Finding your location…';
+    locationStatus.textContent = labels.loadingLocation;
     void browserPosition(navigator.geolocation).then(coords => {
       if (pending !== request) return;
       city.value = '';
       setOrigin({coords,label: 'your location'});
     }, () => {
-      if (pending === request) setOrigin(origin,'Could not get your location. Try again or choose a city.');
+      if (pending === request) setOrigin(origin,labels.denied);
     });
+  });
+  document.querySelector('[data-find-nearby]')?.addEventListener('click', event => {
+    if (!(event instanceof MouseEvent) || event.metaKey || event.ctrlKey || event.altKey || event.shiftKey) return;
+    locate.focus({preventScroll: true});
+    locate.click();
   });
   clearLocation.addEventListener('click', () => {
     city.value = '';
@@ -182,7 +204,7 @@ export async function startExplorer() {
     if (event.target === city) { chooseCity(); return; }
     if (event.target === region) updateDistricts();
     if (event.target === provider) {
-      try { localStorage.setItem(PROVIDER_KEY,provider.value); } catch {}
+      rememberMapProvider(provider.value as Provider);
     }
     page = 0;
     render();

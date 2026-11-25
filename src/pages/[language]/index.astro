@@ -1,0 +1,22 @@
+---
+import Base from '../../layouts/Base.astro';
+import Explore from '../../components/Explore.astro';
+import Icon from '../../components/Icon.astro';
+import {labelSets, locales, type Locale} from '../../lib/locales';
+
+export function getStaticPaths() {
+  return locales.filter(locale => locale.id !== 'en').map(locale => ({
+    params: {language: locale.id}, props: {locale:locale.id},
+  }));
+}
+const {locale} = Astro.props as {locale:Locale};
+const labels = labelSets[locale];
+---
+<Base title={labels.head} description={labels.intro} section="Explore" locale={locale}>
+  <header class="shell page-head">
+    <h1>{labels.head}</h1>
+    <p>{labels.intro}</p>
+    <a class="text-link" href="#find-nearby" data-find-nearby><Icon name="location" size={18} /> {labels.useLocation}</a>
+  </header>
+  <Explore locale={locale} />
+</Base>

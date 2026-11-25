@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://subtlesayak.github.io/Mutta-Puffs-Database/schemas/v1/place-identities.json",
+  "title": "MPDB place identities v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "import_ids", "merges"],
+  "$defs": {
+    "place_id": {"type": "string", "pattern": "^mpdb-[a-z0-9]{8,24}$"}
+  },
+  "properties": {
+    "schema_version": {"const": 1},
+    "import_ids": {
+      "type": "object",
+      "propertyNames": {"pattern": "^(cid|pin|url|tag):.+"},
+      "additionalProperties": {"$ref": "#/$defs/place_id"}
+    },
+    "merges": {
+      "type": "object",
+      "propertyNames": {"$ref": "#/$defs/place_id"},
+      "additionalProperties": {
+        "type": "object",
+        "required": ["place_id", "reference"],
+        "additionalProperties": false,
+        "properties": {
+          "place_id": {"$ref": "#/$defs/place_id"},
+          "reference": {"type": "string", "pattern": "^https://github\\.com/subtlesayak/Mutta-Puffs-Database/(issues|pull)/[1-9][0-9]*$"}
+        }
+      }
+    }
+  }
+}

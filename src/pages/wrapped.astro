@@ -26,6 +26,7 @@ import {path} from '../lib/format';
         <div class="actions" data-share-recap hidden>
           <button type="button" class="button" data-native-share hidden>Share recap</button>
           <button type="button" class="button secondary" data-copy-recap>Copy recap</button>
+          <button type="button" class="button secondary" data-download-recap>Download recap image</button>
         </div>
         <label class="field" data-manual-copy hidden>Recap to copy <textarea readonly rows="6"></textarea></label>
       </div>
@@ -46,6 +47,8 @@ import {path} from '../lib/format';
 </style>
 <script>
   import {readPassport, recap} from '../lib/passport';
+  import {pagePlaceAliases} from '../lib/place-identity';
+  import {wrappedImage} from '../lib/wrapped-image';
   import {formatNumber, formatPrice, path, siteUrl} from '../lib/format';
   import type {Place} from '../lib/types';
   const root = document.querySelector<HTMLElement>('[data-wrapped]')!;
@@ -56,12 +59,13 @@ import {path} from '../lib/format';
   const manual = find<HTMLElement>('[data-manual-copy]');
   const url = new URL(path('wrapped/'),siteUrl.origin).href;
   let message = '';
+  let graphic: Parameters<typeof wrappedImage>[0] | undefined;
   share.hidden = !navigator.share;
 
   async function start() {
     let passport: ReturnType<typeof readPassport>;
     let places: Place[];
-    try {passport = readPassport(localStorage);}
+    try {passport = readPassport(localStorage,pagePlaceAliases());}
     catch {status.textContent = 'Could not read your passport. Check whether this browser allows site storage.'; return;}
     try {
       const response = await fetch(path('api/v1/places.json'));
@@ -88,12 +92,35 @@ import {path} from '../lib/format';
       for (const key of ['visits','places','cities','countries'] as const) find('[data-' + key + ']').textContent = formatNumber(totals[key]);
       find('[data-favourite]').textContent = favourite;
       find('[data-spent]').textContent = spent;
+      graphic = {title,stats:[
+        ['Visits',formatNumber(totals.visits)],['Bakeries',formatNumber(totals.places)],
+        ['Cities',formatNumber(totals.cities)],['Countries',formatNumber(totals.countries)],
+      ],note:favourite};
       message = [title, totals.visits + (totals.visits === 1 ? ' visit' : ' visits') + ' · ' + totals.places + (totals.places === 1 ? ' bakery' : ' bakeries') + ' · ' + totals.cities + (totals.cities === 1 ? ' city' : ' cities'), totals.countries + (totals.countries === 1 ? ' country' : ' countries'), favourite, spent].filter(Boolean).join('\n');
     }
     year.addEventListener('change',render);
     render();
     find('[data-wrapped-content]').hidden = false;
   }
+  const download = find<HTMLButtonElement>('[data-download-recap]');
+  download.addEventListener('click', async () => {
+    if (!graphic) return;
+    download.disabled = true;
+    try {
+      const image = await wrappedImage(graphic);
+      const imageUrl = URL.createObjectURL(image);
+      const link = document.createElement('a');
+      link.href = imageUrl;
+      link.download = image.name;
+      link.click();
+      setTimeout(() => URL.revokeObjectURL(imageUrl),1000);
+      status.textContent = 'Recap image downloaded.';
+    } catch {
+      status.textContent = 'Could not create the recap image. Try copying the recap.';
+    } finally {
+      download.disabled = false;
+    }
+  });
   share.addEventListener('click', async () => {
     try {await navigator.share({title:'My Puff Wrapped',text:message,url});}
     catch (error) {if (!(error instanceof DOMException && error.name === 'AbortError')) status.textContent = 'Could not share the recap. Try copying it instead.';}

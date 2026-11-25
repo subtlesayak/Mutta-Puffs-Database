@@ -1,3 +1,6 @@
+import {resolvePlaceId} from './place-identity.ts';
+import type {PlaceAliases} from './place-identity.ts';
+
 export interface Visit {
   id: string;
   placeId: string;
@@ -6,7 +9,8 @@ export interface Visit {
   spent?: {amount: number; currency: string};
 }
 
-export interface Passport {saved: string[]; visits: Visit[]}
+export interface Collection {id: string; name: string; placeIds: string[]}
+export interface Passport {saved: string[]; visits: Visit[]; collections?: Collection[]}
 interface Destination {name: string; city: string | null; country: string | null}
 type StorageAccess = Pick<Storage,'getItem' | 'setItem'>;
 const key = 'mpdb-passport-v1';
@@ -18,27 +22,34 @@ export function today() {
   return date.getFullYear() + '-' + month + '-' + day;
 }
 
-export function readPassport(storage: StorageAccess): Passport {
+export function readPassport(storage: StorageAccess, aliases: PlaceAliases = {}): Passport {
   const saved = storage.getItem(key);
   if (!saved) return {saved:[],visits:[]};
-  const data = JSON.parse(saved);
+  const data = JSON.parse(saved) as Passport;
   if (!Array.isArray(data.saved) || !Array.isArray(data.visits)) throw new Error('Passport could not be read');
-  return data;
+  return {
+    saved: [...new Set(data.saved.map(id => resolvePlaceId(id, aliases)))],
+    visits: data.visits.map(visit => ({...visit,placeId:resolvePlaceId(visit.placeId, aliases)})),
+    ...(Array.isArray(data.collections) ? {collections:data.collections.map(collection=>({
+      ...collection,placeIds:[...new Set(collection.placeIds.map(id=>resolvePlaceId(id,aliases)))],
+    }))} : {}),
+  };
 }
 
-export function changePassport(storage: StorageAccess, update: (passport: Passport) => void) {
-  const passport = readPassport(storage);
+export function changePassport(storage: StorageAccess, update: (passport: Passport) => void, aliases: PlaceAliases = {}) {
+  const passport = readPassport(storage, aliases);
   update(passport);
   storage.setItem(key,JSON.stringify(passport));
   return passport;
 }
 
-export function toggleSaved(storage: StorageAccess, id: string) {
+export function toggleSaved(storage: StorageAccess, id: string, aliases: PlaceAliases = {}) {
+  id = resolvePlaceId(id, aliases);
   return changePassport(storage, passport => {
     const index = passport.saved.indexOf(id);
     if (index === -1) passport.saved.push(id);
     else passport.saved.splice(index,1);
-  });
+  }, aliases);
 }
 
 export function recap(visits: Visit[], year: number, places: Map<string,Destination>) {

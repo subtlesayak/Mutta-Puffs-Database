@@ -59,15 +59,19 @@ def repeated(records, key):
     return {name: rows for name, rows in sorted(groups.items()) if len(rows) > 1}
 
 
+def parse_rows(stream):
+    reader = csv.DictReader(stream)
+    if tuple(reader.fieldnames or ()) != SOURCE_FIELDS:
+        raise ValueError(f"Expected an export with these columns: {', '.join(SOURCE_FIELDS)}")
+    rows = list(reader)
+    if any(None in row or None in row.values() for row in rows):
+        raise ValueError("Every export row must have all five columns")
+    return rows
+
+
 def read_rows(path=SOURCE):
     with path.open(encoding="utf-8-sig", newline="") as stream:
-        reader = csv.DictReader(stream)
-        if tuple(reader.fieldnames or ()) != SOURCE_FIELDS:
-            raise ValueError(f"Expected an export with these columns: {', '.join(SOURCE_FIELDS)}")
-        rows = list(reader)
-        if any(None in row or None in row.values() for row in rows):
-            raise ValueError("Every export row must have all five columns")
-        return rows
+        return parse_rows(stream)
 
 
 def map_links(row):

@@ -12,6 +12,22 @@ Start with the [contribution page](https://subtlesayak.github.io/Mutta-Puffs-Dat
 
 Location estimates and source pins are separate from independently verified coordinates. A submitted issue remains a proposal until a maintainer reviews the evidence and merges a record.
 
+## Optional community service
+
+The atlas uses GitHub issue drafts when `PUBLIC_COMMUNITY_API_URL` is empty. To accept contributions without a GitHub account and offer encrypted Passport sync, run `npm run community` with Node 24 and a persistent SQLite directory. Set `MPDB_DATABASE_PATH` to the database file, `MPDB_ALLOWED_ORIGINS` to the browser origin (for GitHub Pages, `https://subtlesayak.github.io`), and `MPDB_MODERATOR_TOKEN` to a private random secret of at least 32 bytes.
+
+The Node service defaults to `127.0.0.1:8787`. Put it behind an HTTPS reverse proxy and check the public `/health` route before setting `PUBLIC_COMMUNITY_API_URL` to the HTTPS API root in the repository’s Actions variables. Redeploy Pages to use the service. Back up the SQLite database with SQLite’s backup mechanism and keep the moderator secret outside the repository and public build.
+
+Open `/moderation/` under the atlas URL and enter the moderation key to review the queue. Check consent and evidence, then approve or decline. For an approved entry, open its GitHub record, follow the publication steps above, and attach the issue or pull request to the submission. Contributors can check the outcome with their private receipt code.
+
+## Refresh the Maps export
+
+Run `python scripts/refresh_export.py PATH_TO_EXPORT.csv` with the new file. It checks the export against the place identities already published, preserves the input bytes, and registers IDs for new records. Rebuild the offline analysis and infographic before submitting the update.
+
+When a Maps link acquires a new import key, add the new key beside the old key in [the place identity registry](data/place-identities.json), pointing both to the existing place ID. A correction remains attached to that identity when an export changes row numbers. Exact duplicate entries remain in the source CSV and resolve to one place in the atlas.
+
+For a reviewed duplicate, add the retired ID to `merges` with the surviving `place_id` and the issue or pull request documenting the decision. Review any approved details for the retired record first and carry the relevant evidence to the survivor. The build redirects old place URLs and resolves existing trail stops, reviews, observations and Passport records to the surviving ID.
+
 ## Photos, stories and trails
 
 Check the photo issue for the photographer’s credit, consent to CC BY 4.0, and an accurate alt description. Publish an optimized copy with precise location metadata removed. The place record’s `photos` entry links to that image and the issue. Preserve the place’s verification status unless the contributor also provided evidence for a verification.

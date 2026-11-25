@@ -1,6 +1,10 @@
 import {changePassport, readPassport, today, toggleSaved} from '../lib/passport';
 import type {Passport, Visit} from '../lib/passport';
+import {formatPassportBackup, mergePassportBackups, passportBackupLimit, readPassportBackup} from '../lib/passport-backup';
 import {formatDate, formatPrice, placePath} from '../lib/format';
+import {pagePlaceAliases, resolvePlaceId} from '../lib/place-identity';
+import {startPassportSync} from './passport-sync';
+import {passportCollections} from './passport-collections';
 
 export function startPassport() {
   const root = document.querySelector<HTMLElement>('[data-passport]')!;
@@ -14,8 +18,10 @@ export function startPassport() {
   let removed: Visit | null = null;
   const labels = new Map([...choose.options].slice(1).map(option => [option.value,option.text]));
   date.value = date.max = today();
-  const requested = new URLSearchParams(location.search).get('place');
+  const aliases = pagePlaceAliases();
+  const requested = resolvePlaceId(new URLSearchParams(location.search).get('place') ?? '', aliases);
   if (requested && labels.has(requested)) choose.value = requested;
+  const renderCollections = passportCollections(root,choose,labels,aliases,render);
 
   function listing(id: string) {
     const link = document.createElement('a');
@@ -71,10 +77,11 @@ export function startPassport() {
       return li;
     }));
     undo.hidden = removed === null;
+    renderCollections(passport);
   }
   function mutate(update: (passport: Passport) => void, message: string) {
     try {
-      render(changePassport(localStorage,update));
+      render(changePassport(localStorage,update,aliases));
       status.textContent = message;
       return true;
     } catch {
@@ -84,7 +91,7 @@ export function startPassport() {
   }
 
   try {
-    render(readPassport(localStorage));
+    render(readPassport(localStorage,aliases));
     find('[data-passport-content]').hidden = false;
   } catch {
     status.textContent = 'Could not open this passport. Check whether this browser allows site storage.';
@@ -118,8 +125,48 @@ export function startPassport() {
     if (!choose.reportValidity()) return;
     if (mutate(book => {if (!book.saved.includes(choose.value)) book.saved.push(choose.value);},'Place saved for later.')) save.focus();
   });
+  const backupStatus = find<HTMLElement>('[data-backup-status]');
+  find<HTMLButtonElement>('[data-export-passport]').addEventListener('click', () => {
+    try {
+      const blob = new Blob([formatPassportBackup(readPassport(localStorage,aliases))],{type:'application/json'});
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'puff-passport-' + today() + '.json';
+      link.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      backupStatus.textContent = 'Passport backup downloaded.';
+    } catch {
+      backupStatus.textContent = 'Could not download your passport. Check that storage is available and try again.';
+    }
+  });
+  const importForm = find<HTMLFormElement>('[data-import-passport]');
+  const importInput = importForm.querySelector<HTMLInputElement>('input[type=file]')!;
+  const importButton = importForm.querySelector<HTMLButtonElement>('button')!;
+  importForm.addEventListener('submit', async event => {
+    event.preventDefault();
+    const file = importInput.files?.[0];
+    if (!file) return;
+    importButton.disabled = true;
+    try {
+      if (file.size > passportBackupLimit) throw new Error('Choose a passport backup smaller than 2 MB.');
+      const backup = readPassportBackup(await file.text(),aliases);
+      const passport = changePassport(localStorage, book => {
+        Object.assign(book, mergePassportBackups(book,backup));
+      },aliases);
+      render(passport);
+      importForm.reset();
+      backupStatus.textContent = 'Passport backup imported.';
+    } catch (error) {
+      backupStatus.textContent = error instanceof Error ? error.message : 'Could not import this passport backup.';
+      importInput.focus();
+    } finally {
+      importButton.disabled = false;
+    }
+  });
+  startPassportSync(root,aliases,render);
   window.addEventListener('storage', () => {
-    try {render(readPassport(localStorage));} catch {}
+    try {render(readPassport(localStorage,aliases));} catch {}
   });
 }
 
@@ -127,14 +174,15 @@ export function enablePlaceBookmark() {
   const button = document.querySelector<HTMLButtonElement>('[data-bookmark]');
   if (!button) return;
   const id = button.dataset.bookmark!;
+  const aliases = pagePlaceAliases();
   const status = document.querySelector<HTMLElement>('[data-bookmark-status]')!;
   try {
-    button.setAttribute('aria-pressed',String(readPassport(localStorage).saved.includes(id)));
+    button.setAttribute('aria-pressed',String(readPassport(localStorage,aliases).saved.includes(id)));
     button.hidden = false;
   } catch {}
   button.addEventListener('click', () => {
     try {
-      const saved = toggleSaved(localStorage,id).saved.includes(id);
+      const saved = toggleSaved(localStorage,id,aliases).saved.includes(id);
       button.setAttribute('aria-pressed',String(saved));
       status.textContent = saved ? 'Saved to your passport.' : 'Removed from saved places.';
     } catch {

@@ -5,7 +5,7 @@ import {formatNumber, github, path} from '../lib/format';
 import {analyticsConfigured} from '../scripts/analytics';
 const {stats} = atlas;
 const files = [
-  ['Places','places.json'],['Map points','places.geojson'],['Statistics','stats.json'],['Cities','cities.json'],
+  ['Places','places.json'],['Place aliases','place-aliases.json'],['Map points','places.geojson'],['Statistics','stats.json'],['Cities','cities.json'],
   ['Community reviews','reviews.json'],['Dated observations','observations.json'],['Curated trails','trails.json'],['Puff rankings','leaderboard.json'],
   ['Latest price and score by place','place-metrics.json'],['Mutta Puff Index','price-index.json'],
 ];
@@ -26,7 +26,7 @@ const files = [
       <ul>{files.map(([label,file]) => <li><a href={path('api/v1/' + file)}>{label} · {file}</a></li>)}</ul>
       <p><a href={github + '/blob/main/data/mutta-puffs-everywhere.csv'}>Latest Maps export</a> · <a href={github + '/blob/main/DATA-LICENSE.md'}>Data sources and licensing</a> · <a href={path('schemas/v1/place.json')}>Place schema v1</a> · <a href={path('insights/')}>Atlas insights</a></p>
       <h2 id="privacy">Privacy</h2>
-      <p>Passport entries and saved drafts use this browser’s storage. They stay here until you choose to share a recap or continue a contribution on GitHub.</p>
+      <p>Passport entries and saved drafts use this browser’s storage. You control when to export or share them. If you enable Passport sync, the atlas encrypts your Passport in this browser before uploading the backup. Continuing on GitHub sends your contribution draft to GitHub for you to review and post.</p>
       {analyticsConfigured ? <>
         <p>Optional Umami analytics count page visits, chosen cities, directions clicks, searches with no matches, and handoffs to GitHub. The atlas sends page paths and selected public IDs, excluding coordinates, search text, private notes, and draft contents. The analytics host receives the usual connection information, including your IP address and browser.</p>
         <button class="button secondary" type="button" data-analytics-preference aria-pressed="false">Allow usage analytics</button>

@@ -25,7 +25,7 @@ def check():
     cities = json.loads((DIST / "api/v1/cities.json").read_text())["cities"]
     trails = json.loads((DIST / "api/v1/trails.json").read_text())["trails"]
     for route in ("", "map/", "cities/", "insights/", "about/", "contribute/", "analysis/", "share/", "offline/",
-                  "guide/", "leaderboard/", "price-index/", "trails/", "heritage/", "passport/", "roulette/", "wrapped/"):
+                  "guide/", "leaderboard/", "price-index/", "trails/", "pit-stops/", "missions/", "heritage/", "passport/", "roulette/", "wrapped/", "languages/", "ml/", "hi/", "ta/", "kn/"):
         assert (DIST / route / "index.html").is_file(), route
     assert all((DIST / "places" / place["id"] / "index.html").is_file() for place in places)
     assert all((DIST / "cities" / city["id"] / "index.html").is_file() for city in cities)

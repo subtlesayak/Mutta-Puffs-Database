@@ -19,12 +19,13 @@ def build():
     metadata = {"schema_version": VERSION, "provenance": "https://github.com/subtlesayak/Mutta-Puffs-Database/blob/main/DATA-LICENSE.md"}
     for key in ("places", "stats", "cities", "trails", "reviews", "observations", "place_metrics"):
         write(api / f"{key.replace('_', '-')}.json", {**metadata, key: data[key]})
+    write(api / "place-aliases.json", {**metadata, "aliases": data["place_aliases"]})
     write(api / "places.geojson", {**place_geojson(data["places"]), **metadata})
     write(api / "leaderboard.json", {**metadata, **data["leaderboard"]})
     write(api / "price-index.json", {**metadata, **data["price_index"]})
     schemas = ROOT / "public" / "schemas" / "v1"
     schemas.mkdir(parents=True, exist_ok=True)
-    for kind in KINDS.values():
+    for kind in (*KINDS.values(), "place-identities"):
         copy2(ROOT / "schemas" / f"{kind}.schema.json", schemas / f"{kind}.json")
     write(ROOT / "public" / "basemap.geojson", basemap_geojson())
     runpy.run_path(str(ROOT / "scripts" / "analyze.py"), run_name="__main__")

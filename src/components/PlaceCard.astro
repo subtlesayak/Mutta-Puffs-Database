@@ -10,5 +10,5 @@ const provider = Object.keys(place.map_links)[0] as Provider | undefined;
   <h3><a href={placePath(place.id)}>{place.name}</a></h3>
   <p class="muted">{locality(place.location) || 'Location to be confirmed'}</p>
   <div class="tags"><span class:list={['tag', {estimate: place.location.accuracy === 'estimated'}]}>{accuracyLabels[place.location.accuracy]}</span></div>
-  {provider && <a class="text-link" href={place.map_links[provider]} target="_blank" rel="noopener noreferrer" aria-label={openInMapName(provider,place.name)}>{openInMap(provider)}</a>}
+  {provider && <a class="text-link" data-provider-links={JSON.stringify(place.map_links)} data-place-label={place.name} data-directions={provider} href={place.map_links[provider]} target="_blank" rel="noopener noreferrer" aria-label={openInMapName(provider,place.name)}>{openInMap(provider)}</a>}
 </li>
