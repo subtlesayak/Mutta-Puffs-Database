@@ -4,6 +4,7 @@ import '@fontsource-variable/fraunces';
 import '@fontsource-variable/fraunces/wght-italic.css';
 import '../styles/atlas.css';
 import Icon from '../components/Icon.astro';
+import SiteNavigation from '../components/SiteNavigation.astro';
 import {github, path, siteUrl} from '../lib/format';
 import {guideDestinations} from '../lib/navigation';
 
@@ -11,7 +12,6 @@ interface Props {title: string; description: string; section?: string; noindex?:
 const {title, description, section, noindex = false} = Astro.props;
 const fullTitle = section === 'Explore' ? 'Mutta Puffs Everywhere · The egg puff atlas' : title + ' · Mutta Puffs Everywhere';
 const canonical = new URL(Astro.url.pathname, siteUrl.origin);
-const nav = [['Explore', ''], ['Puff Map', 'map/'], ['Cities', 'cities/'], ['Puff Guide', 'guide/'], ['Insights', 'insights/']];
 const activeSection = section ?? (guideDestinations.some(({route}) => canonical.pathname.startsWith(path(route))) ? 'Puff Guide' : undefined);
 ---
 <!doctype html>
@@ -38,10 +38,11 @@ const activeSection = section ?? (guideDestinations.some(({route}) => canonical.
     <header class="masthead">
       <div class="shell header-inner">
         <a href={path()} class="wordmark"><span class="brand-icon"><Icon name="puff" size={24} /></span><span>Mutta Puffs<small>Everywhere</small></span></a>
-        <nav aria-label="Main navigation">
-          {nav.map(([label, route]) => <a href={path(route)} aria-current={canonical.pathname === path(route) ? 'page' : activeSection === label ? 'true' : undefined}>{label}</a>)}
-          <a class="button small" href={path('contribute/')} aria-current={canonical.pathname === path('contribute/') ? 'page' : undefined}>Contribute <Icon name="arrow" size={16} /></a>
-        </nav>
+        <SiteNavigation variant="desktop" pathname={canonical.pathname} activeSection={activeSection} />
+        <details class="mobile-menu">
+          <summary class="button secondary small"><Icon name="menu" size={19} /> Menu</summary>
+          <SiteNavigation variant="mobile" pathname={canonical.pathname} activeSection={activeSection} />
+        </details>
       </div>
     </header>
     <main id="main" tabindex="-1"><slot /></main>
@@ -68,6 +69,25 @@ const activeSection = section ?? (guideDestinations.some(({route}) => canonical.
   }
   updateScrollPadding();
   if ('ResizeObserver' in window) new ResizeObserver(updateScrollPadding).observe(masthead);
+
+  const mobileMenu = masthead.querySelector<HTMLDetailsElement>('.mobile-menu')!;
+  const menuSummary = mobileMenu.querySelector<HTMLElement>('summary')!;
+  mobileMenu.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && mobileMenu.open) {
+      mobileMenu.open = false;
+      menuSummary.focus();
+    }
+  });
+  masthead.addEventListener('focusout', (event) => {
+    if (event.relatedTarget instanceof Node && !masthead.contains(event.relatedTarget)) {
+      mobileMenu.open = false;
+    }
+  });
+  document.addEventListener('click', (event) => {
+    if (event.target instanceof Node && !mobileMenu.contains(event.target)) {
+      mobileMenu.open = false;
+    }
+  });
 
   enableApp();
   startAnalytics();

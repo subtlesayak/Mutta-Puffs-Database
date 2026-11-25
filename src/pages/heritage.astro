@@ -1,74 +1,296 @@
 ---
 import Base from '../layouts/Base.astro';
-import Icon from '../components/Icon.astro';
+import HeritageStory from '../components/HeritageStory.astro';
 import {path} from '../lib/format';
+
+const chapters = [
+  { id: 'name', label: 'The name' },
+  { id: 'origins', label: 'Bakery origins' },
+  { id: 'recipe', label: 'The recipe' },
+  { id: 'travels', label: 'Puffs abroad' },
+  { id: 'around-the-world', label: 'Related pastries' },
+];
+
+const cochin = {
+  href: 'https://www.onmanorama.com/food/features/2026/08/03/egg-puff-origin-story-cochin-bakery-kerala-history.html',
+  label: 'Onmanorama’s Cochin Bakery interview',
+};
+
+const maria = {
+  href: 'https://mariasmenu.com/vegetarian/kerala-egg-puffs',
+  label: 'Maria’s Menu egg puff recipe',
+};
 ---
-<Base title="Puff Heritage" description="Read about the bakeries, tea shops, and home recipes that tell the story of mutta puffs.">
+<Base title="Puff Heritage" description="The story of Kerala’s mutta puff, from its Malayalam name and bakery origins to a home recipe, puffs abroad, and related pastries around the world.">
   <div class="shell">
-    <header class="page-head"><p class="kicker">Puff Heritage</p><h1>Stories from the bakery counter</h1><p>How a flaky snack made its way into bakery cases, tea breaks, and family recipes.</p></header>
-    <div class="heritage-layout">
-      <article class="panel heritage-story">
-        <p class="kicker">Kochi, Kerala</p>
-        <h2>Cochin Bakery’s egg puff story</h2>
-        <p>Cochin Bakery traces its start to four brothers from Thalassery who opened a bakery on Cannon Shed Road in 1939. In interviews for Onmanorama’s <em>Served Since</em>, the family recalls introducing puff pastry in the 1960s and using boiled egg as a filling in the early 1970s.</p>
-        <p>The family’s recollection is one account of how the egg puff entered Kerala’s bakeries. The documentary also records a different use for the shop counter. The bakery gave writer Vaikom Muhammad Basheer space to sell his books.</p>
-        <a class="text-link" href="https://www.onmanorama.com/videos/food/kerala-recipes/2026/08/02/who-made-the-first-egg-puff-the-story-of-a-bakery-that-fed-kings-hosted-basheer.html">Watch the bakery interview <Icon name="external" size={16} /></a>
-      </article>
-      <article class="panel heritage-story">
-        <p class="kicker">Thalassery, Kerala</p>
-        <h2>Before the puff, there was the biscuit</h2>
-        <p>According to the family history of Mambally’s Royal Biscuit Factory, Mambally Bapu learned to make biscuits in Burma before opening his bakery in Thalassery in 1880. Biscuits, rusks, bread and buns were among the early bakes.</p>
-        <p>When Cochin Bakery’s founders moved to Kochi decades later, they brought training from Mambally Bapu’s bakery with them. That apprenticeship links the early Thalassery bakery trade to the family’s account of the egg puff in Kochi.</p>
-        <ul>
-          <li><a href="https://mamballys.com/about-us/">Mambally’s family history</a></li>
-          <li><a href="https://www.onmanorama.com/food/features/2026/08/03/egg-puff-origin-story-cochin-bakery-kerala-history.html">Onmanorama’s interview with the Cochin Bakery family</a></li>
-        </ul>
-      </article>
-      <article class="panel heritage-story">
-        <p class="kicker">Bengaluru, Karnataka</p>
-        <h2>Inside the Iyengar bakery case</h2>
-        <p>In <em>Oota</em>, Meera Vasudev describes how Bengaluru’s Iyengar bakeries adapted baking to local vegetarian tastes. Vegetable puffs sat alongside palya buns, butter biscuits, and eggless cakes. The atlas’s Bengaluru trail follows shops with Iyengar bakery in their names. Menus vary by shop.</p>
-        <a class="text-link" href="https://rvca.edu.in/wp-content/uploads/2025/03/2-Meera-Vasudev.pdf">Read Meera Vasudev’s <em>Oota</em> (PDF) <Icon name="external" size={16} /></a>
-        <a class="text-link" href={path('trails/bengaluru-iyengar-bakery-run/')}>Explore the Bengaluru bakery trail <Icon name="arrow" size={16} /></a>
-      </article>
-      <article class="panel heritage-story">
-        <p class="kicker">From the recipe notebook</p>
-        <h2>What goes inside a mutta puff?</h2>
-        <p>Puff pastry, spiced onions and a boiled egg give the Kerala bakery-style puff its shape and filling. Maria’s Menu folds half an egg into each pastry with onion masala. Lekshmi’s Kitchen seasons the filling with fennel and serves the puffs hot with tea or coffee.</p>
-        <ul>
-          <li><a href="https://mariasmenu.com/vegetarian/kerala-egg-puffs">Maria’s Menu bakery-style egg puffs</a></li>
-          <li><a href="https://www.lekshmiskitchen.com/recipes/egg-puffs">Lekshmi’s Kitchen egg puffs</a></li>
-        </ul>
-      </article>
-      <article class="panel heritage-story">
-        <p class="kicker">At the chayakkada</p>
-        <h2>A cup of tea and a place to talk</h2>
-        <p>In an interview with researcher S. Harikrishnan, Kozhikode tea shop owner Babu Purushottaman remembered customers lingering over tea and conversations that drew him into local politics. The study records similar memories from Kochi, where people met visitors from abroad in neighbourhood tea shops.</p>
-        <p>Home recipes for Kerala egg puffs often suggest tea on the side. If there’s a shop where you still order the two together, its story belongs here too.</p>
-        <ul>
-          <li><a href="https://doras.dcu.ie/24686/1/S.Harikrishnan_Social%20Spaces%20and%20the%20Public%20Sphere.pdf">S. Harikrishnan’s tea shop interviews (PDF)</a></li>
-          <li><a href="https://mariasmenu.com/vegetarian/kerala-egg-puffs">Maria’s Menu on puffs for evening tea</a></li>
-        </ul>
-      </article>
-      <article class="panel heritage-story">
-        <p class="kicker">Across the water</p>
-        <h2>An egg puff recipe in a UK parish newsletter</h2>
-        <p>In 2018, Hermon Mar Thoma Church’s UK newsletter featured a recipe for Kerala-style spicy egg puffs. The recipe called for ready-made pastry squares, boiled egg halves and an onion masala with curry leaves and black pepper.</p>
-        <p>It’s a small record of a Kerala bakery snack being shared with home cooks abroad. The atlas also has community-saved spots around Liverpool.</p>
-        <ul>
-          <li><a href="https://hermonmarthoma.ukchurches.co/wp-content/uploads/2018/06/Newsletter-April-July-2018.pdf#page=6">Read the parish newsletter recipe (PDF, page 6)</a></li>
-          <li><a href={path('cities/liverpool/')}>Browse Liverpool puff spots</a></li>
-        </ul>
-      </article>
-    </div>
-    <section class="section panel empty-panel"><h2>What’s your bakery story?</h2><p>Tell us about a shop that shaped your neighbourhood, a family recipe, or a puff you grew up eating.</p><a class="button" href={path('contribute/?kind=heritage')}>Share a story</a></section>
+    <header class="page-head heritage-head">
+      <div>
+        <p class="kicker">Puff Heritage</p>
+        <h1>The story of the egg puff</h1>
+        <p>Follow Kerala’s flaky bakery snack from the shop counter to the home oven, a British parish newsletter and a catering menu in Sydney.</p>
+      </div>
+      <img
+        src={path('images/egg-puff.webp')}
+        width="1536"
+        height="1024"
+        fetchpriority="high"
+        alt="Golden puffs on an enamel plate, one split open to show egg and onion masala, beside a glass of tea"
+      />
+    </header>
+
+    <nav class="chapter-nav" aria-label="On this page">
+      <ul>
+        {chapters.map(({ id, label }) => <li><a href={`#${id}`}>{label}</a></li>)}
+      </ul>
+    </nav>
+
+    <section class="section" id="name" aria-labelledby="name-heading">
+      <div class="heading">
+        <h2 id="name-heading">What does <em>mutta puff</em> mean?</h2>
+        <p><span lang="ml">മുട്ട പഫ്സ്</span> pairs the Malayalam word for egg with an English name for a light pastry.</p>
+      </div>
+      <dl class="story-grid word-pair">
+        <div class="panel">
+          <dt><span lang="ml">മുട്ട</span> <span class="roman" lang="ml-Latn">muṭṭa</span></dt>
+          <dd>In Malayalam, <em>mutta</em> means egg. It shares its roots with Tamil <em lang="ta-Latn">muṭṭai</em> and Kannada <em lang="kn-Latn">moṭṭe</em>. English-language menus and articles also spell the Malayalam word <em>motta</em>.</dd>
+          <dd class="word-sources">
+            <a href="https://api.repository.cam.ac.uk/server/api/core/bitstreams/914f29a5-3fed-4d8d-a9fa-45c964a34883/content">Dravidian word forms (PDF)</a>
+            <a href="https://indianexpress.com/article/cities/thiruvananthapuram/kerala-bakeries-culinary-motta-puffs-plum-cakes-9426013/lite/">“Motta puffs” in The Indian Express</a>
+          </dd>
+        </div>
+        <div class="panel">
+          <dt>Puff</dt>
+          <dd>The English verb <em>puff</em> goes back to Old English <em lang="ang">pyffan</em>, associated with blowing. The English word also means to swell and names a filled pastry. In the oven, steam pushes apart the thin sheets of dough and lifts the pastry into flakes.</dd>
+          <dd class="word-sources">
+            <a href="https://www.merriam-webster.com/dictionary/puff">Merriam-Webster’s entry for “puff”</a>
+            <a href="https://www.bakeinfo.co.nz/facts/flour-based-products/pastry/puff-pastry/">Baking Industry Research Trust on pastry layers</a>
+          </dd>
+        </div>
+      </dl>
+    </section>
+
+    <section class="section" id="origins" aria-labelledby="origins-heading">
+      <div class="heading">
+        <h2 id="origins-heading">From puff pastry to mutta puff</h2>
+        <p>European cookbooks document the pastry technique centuries earlier. The familiar Kerala filling appears in much later bakery accounts.</p>
+      </div>
+      <div class="story-grid">
+        <HeritageStory place="17th-century cookbooks" title="Folding butter into dough" sources={[
+          { href: 'https://histolf.ulb.be/index.php?catid=16&id=301%3A1651-le-cuisinier-francois-la-varenne-251-300&option=com_content&view=article', label: 'La Varenne’s 1651 recipe text' },
+          { href: 'https://wellcomecollection.org/works/z6h8hubz', label: 'Robert May’s 1660 cookbook at Wellcome Collection' },
+          { href: 'https://app.ckbk.com/reference/swee13396c16s001e015/pastry-puff', label: 'The Oxford Companion on the origins of puff pastry' },
+        ]}>
+          <p>In 1651, La Varenne’s <em lang="fr">Le Cuisinier françois</em> described folding and rolling pastry with butter. Robert May’s English cookbook <em>The Accomplisht Cook</em>, first published in 1660, gives several ways to make puff paste. The exact origin of the folding technique is debated.</p>
+        </HeritageStory>
+
+        <HeritageStory place="Thalassery to Kochi" title="Before the puff, there was the biscuit" sources={[
+          { href: 'https://mamballys.com/about-us/', label: 'Mambally’s family history' },
+          cochin,
+        ]}>
+          <p>According to his family, Mambally Bapu learned biscuit making in Burma, now Myanmar, and opened a bakery in Thalassery in 1880. Biscuits, rusks, bread and buns were among its early bakes.</p>
+          <p>Onmanorama reports that members of the family who founded Cochin Bakery trained in the Mambally tradition. Four brothers from Thalassery opened their shop on Kochi’s Cannon Shed Road in 1939. It later gave writer Vaikom Muhammad Basheer space to sell his books.</p>
+        </HeritageStory>
+
+        <HeritageStory place="Kochi, 1960s and 1970s" title="From the bajji to the bakery tray" featured sources={[
+          cochin,
+          { href: 'https://www.onmanorama.com/videos/food/kerala-recipes/2026/08/02/who-made-the-first-egg-puff-the-story-of-a-bakery-that-fed-kings-hosted-basheer.html', label: 'Watch the Cochin Bakery documentary' },
+        ]}>
+          <p>Bakery director M. P. Ramesh recalls bringing in a baker from Bombay, now Mumbai, to teach puff pastry in the 1960s. Cochin Bakery’s early puffs held meat. The shop already used boiled eggs for egg bajji, dipping them in gram flour batter before frying.</p>
+          <p>In the early 1970s, the bakers tried putting boiled egg inside the pastry as a cheaper filling. Ramesh remembers the egg puff taking off around 1973–74. The interview records how one bakery made the switch. The earliest egg puff in Kerala is still an open question.</p>
+        </HeritageStory>
+
+        <HeritageStory place="Chennai, Tamil Nadu" title="Three slips of paper and a bakery name" sources={[
+          { href: 'https://www.thenewsminute.com/features/mcrennett-original-chennai-bakery-english-name-tamil-heart-44311', label: 'The News Minute’s McRennett interviews' },
+          { href: 'https://www.mcrennett2home.in/pages/about-us', label: 'McRennett’s bakery history' },
+        ]}>
+          <p>A senior employee of McRennett told The News Minute that the founder chose three English-sounding names and asked a child to draw one from slips of paper. The bakery dates to 1903. By the time of the 2016 interview, customers were returning for its egg puffs, plum cakes and hot-cross buns.</p>
+        </HeritageStory>
+
+        <HeritageStory place="Bengaluru, Karnataka" title="Inside the Iyengar bakery case" sources={[
+          { href: 'https://rvca.edu.in/wp-content/uploads/2025/03/2-Meera-Vasudev.pdf', label: 'Meera Vasudev’s Oota (PDF)' },
+          { href: 'https://bangaloremirror.indiatimes.com/bangalore/others/bytes-of-bengaluru-a-piece-of-puff/amp_articleshow/68237018.cms', label: 'Bangalore Mirror’s puff interviews' },
+          { href: path('trails/bengaluru-iyengar-bakery-run/'), label: 'Explore the Bengaluru bakery trail' },
+        ]}>
+          <p>Meera Vasudev’s <em>Oota</em> describes how Bengaluru’s Iyengar bakeries made room for vegetarian tastes, with vegetable puffs alongside palya buns and eggless cakes. In a Bangalore Mirror interview, food walk guide Mansoor Ali recalls trips to Iyengar bakeries with his father and names an egg puff from a Kerala bakery as a favourite.</p>
+        </HeritageStory>
+
+        <HeritageStory place="Kozhikode, Kerala" title="The walk to KR Bakery" sources={[
+          { href: 'https://www.newindianexpress.com/education/edex/2011/Jun/20/kr-bakery-finds-fans-in-gec-264675.html', label: 'The New Indian Express’s 2011 student interviews' },
+          { href: 'https://doras.dcu.ie/24686/1/S.Harikrishnan_Social%20Spaces%20and%20the%20Public%20Sphere.pdf', label: 'S. Harikrishnan’s tea shop interviews (PDF)' },
+        ]}>
+          <p>In 2011, civil engineering students told The New Indian Express they walked from campus to KR Bakery for egg puffs, cutlets and cold drinks. In a separate study, Kozhikode tea-shop owner Babu Purushottaman recalled how conversations at his shop drew him into local politics. Both accounts capture what a snack stop can become for its regulars.</p>
+        </HeritageStory>
+      </div>
+    </section>
+
+    <section class="section" id="recipe" aria-labelledby="recipe-heading">
+      <div class="heading">
+        <h2 id="recipe-heading">Make Kerala-style egg puffs</h2>
+        <p>Flaky pastry, onion masala and a boiled egg make the bakery version recognisable. This home version uses ready-made pastry and makes eight.</p>
+      </div>
+      <div class="panel recipe-card">
+        <div>
+          <h3>Ingredients</h3>
+          <ul>
+            <li>8 puff pastry squares, about 10 cm across</li>
+            <li>4 hard-boiled eggs, peeled and halved</li>
+            <li>2 large onions, thinly sliced</li>
+            <li>1 tbsp coconut oil and a few curry leaves</li>
+            <li>1 tsp each of crushed ginger and garlic</li>
+            <li>1 tsp chilli powder, ½ tsp ground coriander, ½ tsp garam masala, ¼ tsp turmeric, black pepper and salt to taste</li>
+            <li>1 beaten egg for brushing</li>
+          </ul>
+        </div>
+        <div>
+          <h3>Method</h3>
+          <ol>
+            <li>Heat the oven to 200°C (about 400°F). Line a baking tray and thaw the pastry according to its packet.</li>
+            <li>Cook the onions in the oil until golden. Stir in ginger, garlic, curry leaves and the spices. Cook until the masala is thick enough to spoon onto the pastry, then let it cool.</li>
+            <li>Put a spoonful of masala and half a boiled egg on each square. Bring two opposite corners up over the egg, pinch them together and brush the tops with beaten egg.</li>
+            <li>Bake for about 20–25 minutes, until the pastry has risen and turned golden. Serve warm with tea.</li>
+          </ol>
+        </div>
+        <p class="recipe-note">Adapted from <a href={maria.href}>Maria’s Menu</a>. <a href="https://www.lekshmiskitchen.com/recipes/egg-puffs">Lekshmi’s Kitchen</a> adds fennel to the masala. The <a href="https://hermonmarthoma.ukchurches.co/wp-content/uploads/2018/06/Newsletter-April-July-2018.pdf#page=6">2018 parish recipe (PDF, page 6)</a> uses curry leaves and black pepper.</p>
+      </div>
+    </section>
+
+    <section class="section" id="travels" aria-labelledby="travels-heading">
+      <div class="heading">
+        <h2 id="travels-heading">How the egg puff travelled</h2>
+        <p>Kerala’s overseas migration grew sharply in the 1970s as Gulf economies recruited workers. A parish newsletter and later menus offer glimpses of where the snack took root abroad. <a href="https://ecostat.kerala.gov.in/publication-detail/report-on-activity-status-of--migrants--returnees-norka">Kerala’s migration survey</a></p>
+      </div>
+      <div class="story-grid">
+        <HeritageStory place="Dubai, United Arab Emirates" title="The director who still bags the bread" sources={[
+          { href: 'https://www.khaleejtimes.com/uae/32-years-of-baking-for-dubai?amp=1', label: 'Khaleej Times interview with Kunhi Moyin' },
+          { href: 'https://habibbakery.ae/products/egg-puff-1', label: 'Habib Bakery’s egg puff listing' },
+        ]}>
+          <p>Kunhi Moyin went from packing bags at Habib Bakery to becoming its director in 2016. When Khaleej Times visited, he was still at the checkout bagging orders. Habib’s menu lists egg puffs today. The date they first went on sale remains unknown.</p>
+        </HeritageStory>
+
+        <HeritageStory place="United Kingdom, 2018" title="A recipe in the parish newsletter" sources={[
+          { href: 'https://hermonmarthoma.ukchurches.co/wp-content/uploads/2018/06/Newsletter-April-July-2018.pdf#page=6', label: 'Hermon Mar Thoma parish newsletter (PDF, page 6)' },
+          { href: path('cities/liverpool/'), label: 'Browse Liverpool puff spots' },
+        ]}>
+          <p>Hermon Mar Thoma Church’s 2018 newsletter gave readers a way to make Kerala-style egg puffs at home. It called for ready-made pastry squares, boiled egg halves and onion masala. It’s a dated record of how a recipe travelled through a community overseas.</p>
+        </HeritageStory>
+
+        <HeritageStory place="Sydney, Australia" title="A Kerala puff on the catering menu" sources={[
+          { href: 'https://www.appam.com.au/', label: 'Appam’s story' },
+          { href: 'https://www.appam.com.au/menu/', label: 'Appam’s catering menu' },
+        ]}>
+          <p>Chef Anil started Appam to bring Kerala cooking to Sydney. Alongside its larger dishes, his catering menu includes egg puffs and pazham pori. A bakery snack can travel as part of the spread for a gathering.</p>
+        </HeritageStory>
+      </div>
+    </section>
+
+    <section class="section" id="around-the-world" aria-labelledby="world-heading">
+      <div class="heading">
+        <h2 id="world-heading">Eggs in pastry around the world</h2>
+        <p>Cinema snacks, festival pies and street food share the idea of wrapping an egg in dough. These stories come from their own local traditions.</p>
+      </div>
+      <div class="story-grid">
+        <HeritageStory place="Singapore" title="The 35-cent Rex curry puff" featured sources={[
+          { href: 'https://www.nlb.gov.sg/main/article-detail?cmsuuid=6f9897d9-a8e4-41de-87ac-639cb9c7b89b', label: 'Singapore National Library Board’s Old Chang Kee history' },
+        ]}>
+          <p>Street hawker Chang Chuan Boon opened a stall near Rex Cinema around 1973. His fried pastry held curried potato, chicken and a slice of hard-boiled egg. In 1981, it cost 35 Singapore cents. The stall’s history is now part of the story of Old Chang Kee.</p>
+        </HeritageStory>
+
+        <HeritageStory place="Tunisia" title="A brik with a runny yolk" sources={[
+          { href: 'https://www.daftar.afikra.com/articles/rafram-chaddad', label: 'Rafram Chaddad on Tunisian food traditions' },
+          { href: 'https://www.theguardian.com/travel/article/2024/jul/04/tunis-a-chefs-tour-tunisia-food', label: 'Malek Labidi’s food tour of Tunis' },
+        ]}>
+          <p><em lang="fr">Brik à l’œuf</em> folds a runny egg into a crisp, thin pastry. Tunisian artist Rafram Chaddad recalls brik as a street food also eaten at the end of Ramadan. Cookbook author Malek Labidi recounts a folk belief that eating one without spilling the yolk shows you’re ready for marriage.</p>
+        </HeritageStory>
+
+        <HeritageStory place="Berry, France" title="The egg in the Easter slice" sources={[
+          { href: 'https://www.indreberry.fr/le-pate-de-paques-berrichon-une-tradition-qui-fait-vivre-lindre-en-berry/', label: 'Indre en Berry’s account of the Easter pie' },
+        ]}>
+          <p>In Berry, families mark Easter with <em lang="fr">pâté de Pâques</em>, a pastry filled with meat, herbs and hard-boiled eggs that show when you slice it. Indre en Berry traces a written recipe to Jenny Touzin’s 1889 cookbook and links the dish to the end of Lent.</p>
+        </HeritageStory>
+
+        <HeritageStory place="Chile" title="An empanada for Fiestas Patrias" sources={[
+          { href: 'https://chile.travel/blog/fiestas-patrias-en-chile-2/', label: 'Chile Travel’s Fiestas Patrias guide' },
+          { href: 'https://www.memoriachilena.gob.cl/archivos2/pdfs/MC0003218.pdf', label: 'Cookbook preserved by Chile’s National Library (PDF)' },
+        ]}>
+          <p>A baked <em lang="es">empanada de pino</em> holds seasoned beef and onion, hard-boiled egg and olives, with raisins in some versions. It’s a staple of Chile’s national celebrations. A cookbook preserved by the National Library shows the egg going in as slices.</p>
+        </HeritageStory>
+
+        <HeritageStory place="Genoa, Italy, and Uruguay" title="The Easter pie that crossed the Atlantic" sources={[
+          { href: 'https://www.visitgenoa.it/en/torta-pasqualina', label: 'Visit Genoa’s torta pasqualina tradition' },
+          { href: 'https://ambmontevideo.esteri.it/wp-content/uploads/2023/11/13-11-2023altaLaCocinaItalianaenUruguay.pdf', label: 'Italian Embassy cookbook on Italian food in Uruguay (PDF)' },
+        ]}>
+          <p>Genoa’s <em lang="it">torta pasqualina</em> comes with a tradition of layering 33 sheets of dough. The Italian Embassy’s cookbook on Italian food in Uruguay records a version with chard and four eggs cracked whole into pockets in the filling.</p>
+        </HeritageStory>
+      </div>
+    </section>
+
+    <section class="section panel empty-panel" aria-labelledby="contribute-heading">
+      <h2 id="contribute-heading">What’s your bakery story?</h2>
+      <p>Tell us who baked your first puff, how your family makes it, or where you found one far from home. Old menus, recipe cards and first-hand memories can help date the story.</p>
+      <a class="button" href={path('contribute/?kind=heritage')}>Share a story</a>
+    </section>
   </div>
 </Base>
+
 <style>
-  .heritage-layout {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1rem;}
-  .heritage-story {display:grid;gap:.65rem;align-content:start;}
-  .heritage-story h2 {font-size:clamp(1.7rem,4vw,2.5rem);}
-  .heritage-story ul {padding-inline-start:1.15rem;margin:0;}
-  .heritage-story:first-child {background:var(--butter);}
-  @media (max-width:43rem) {.heritage-layout {grid-template-columns:minmax(0,1fr);}}
+  .heritage-head {
+    display: grid;
+    grid-template-columns: minmax(0, 1.12fr) minmax(0, 1fr);
+    align-items: center;
+    gap: clamp(1.25rem, 5vw, 4rem);
+  }
+  .heritage-head h1 { max-inline-size: 13ch; text-wrap: pretty; }
+  .heritage-head > div > p:last-child { max-inline-size: 53ch; }
+  .heritage-head > img { inline-size: 100%; border-radius: var(--round); }
+  .chapter-nav { padding-block: .35rem; border-block: 1px solid var(--line); }
+  .chapter-nav ul {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0 clamp(.8rem, 3vw, 2.25rem);
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  .chapter-nav a {
+    display: inline-flex;
+    align-items: center;
+    min-block-size: 2.75rem;
+    font-size: .95rem;
+    font-weight: 800;
+  }
+  .story-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem;
+  }
+  .word-pair { margin: 0; }
+  .word-pair dt {
+    font-family: var(--display);
+    font-size: clamp(1.45rem, 2.55vw, 2.1rem);
+    font-weight: 650;
+    line-height: 1.15;
+  }
+  .word-pair .roman { margin-inline-start: .5rem; font-size: .8em; font-style: italic; }
+  .word-pair dd { margin: .7rem 0 0; }
+  .word-sources {
+    display: grid;
+    justify-items: start;
+    gap: .15rem;
+    font-size: .875rem;
+    font-weight: 750;
+  }
+  .word-sources a { padding-block: .25rem; min-block-size: 1.75rem; overflow-wrap: anywhere; }
+  .recipe-card {
+    display: grid;
+    grid-template-columns: minmax(0, .78fr) minmax(0, 1fr);
+    gap: 1.25rem clamp(1.25rem, 4vw, 3rem);
+    background: var(--sage);
+  }
+  .recipe-card ul, .recipe-card ol { margin: .75rem 0 0; padding-inline-start: 1.35rem; }
+  .recipe-card li + li { margin-block-start: .45rem; }
+  .recipe-note { grid-column: 1 / -1; }
+  @media (max-width: 46rem) {
+    .heritage-head, .story-grid, .recipe-card { grid-template-columns: minmax(0, 1fr); }
+    .heritage-head > img { aspect-ratio: 2 / 1; object-fit: cover; }
+  }
 </style>
