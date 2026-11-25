@@ -27,6 +27,10 @@ jobs:
         with:
           node-version: "24"
           cache: npm
+      - name: Verify community service unit
+        run: |
+          sed "s|^ExecStart=/usr/bin/node |ExecStart=$(command -v node) |" server/deploy/mpdb-community.service > "$RUNNER_TEMP/mpdb-community.service"
+          systemd-analyze verify "$RUNNER_TEMP/mpdb-community.service"
       - run: python -m pip install -r requirements.txt
       - run: npm ci
       - run: python scripts/validate.py
