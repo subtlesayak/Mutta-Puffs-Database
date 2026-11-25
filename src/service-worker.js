@@ -42,24 +42,26 @@ self.addEventListener('fetch', event => {
   }
   if (request.method !== 'GET' || url.pathname === route('sw.js').pathname) return;
   event.respondWith((async () => {
-    const cache = await caches.open(CACHE_NAME);
+    const cache = await caches.open(CACHE_NAME).catch(() => null);
+    const readCache = (input, options) => cache?.match(input, options).catch(() => null);
     const navigation = request.mode === 'navigate';
     const dataset = url.pathname.startsWith(route('api/').pathname);
     // Fingerprinted bundles have identical bytes for precache, module, and font requests.
     const matchOptions = {ignoreSearch:navigation, ignoreVary:url.pathname.startsWith(route('_astro/').pathname)};
     if (!navigation && !dataset) {
-      const cached = await cache.match(request, matchOptions);
+      const cached = await readCache(request, matchOptions);
       if (cached) return cached;
     }
-    try {
-      const response = await fetch(request);
-      // Location shares are POSTed to the worker. Navigation queries are never stored.
-      if (response.ok && (!navigation || !url.search)) await cache.put(request, response.clone());
-      return response;
-    } catch {
-      return (await cache.match(request, matchOptions))
-        || (navigation && await cache.match(route('offline/')))
+    const response = await fetch(request).catch(() => null);
+    if (!response) {
+      return (await readCache(request, matchOptions))
+        || (navigation && await readCache(route('offline/')))
         || Response.error();
     }
+    // Location shares are POSTed to the worker. Navigation queries are never stored.
+    if (cache && response.ok && (!navigation || !url.search)) {
+      await cache.put(request, response.clone()).catch(() => {});
+    }
+    return response;
   })());
 });

@@ -82,6 +82,24 @@ test('the offline atlas can load the GeoJSON outline if the compact asset is mis
 
 test.describe('PWA',()=>{
   test.use({serviceWorkers:'allow'});
+  test('the online atlas opens when the browser refuses cache writes', async ({page,context}) => {
+    await page.goto('./');
+    await page.evaluate(async () => {await navigator.serviceWorker.ready;});
+    await expect.poll(() => page.evaluate(() => Boolean(navigator.serviceWorker.controller))).toBe(true);
+    const worker = context.serviceWorkers()[0];
+    await worker.evaluate(() => {
+      const key = 'atlasTestCacheWriteAttempts';
+      Reflect.set(globalThis,key,0);
+      Cache.prototype.put = async () => {
+        Reflect.set(globalThis,key,Number(Reflect.get(globalThis,key)) + 1);
+        throw new DOMException('Storage is full','QuotaExceededError');
+      };
+    });
+    const response = await page.goto('cities/');
+    expect(response?.fromServiceWorker()).toBe(true);
+    await expect(page.getByRole('heading',{name:'Pick a city.',exact:true})).toBeVisible();
+    expect(await worker.evaluate(() => Reflect.get(globalThis,'atlasTestCacheWriteAttempts'))).toBeGreaterThan(0);
+  });
   test('the homepage opens Puff Heritage while offline', async ({page,context}) => {
     await page.goto('./');
     const feature = page.getByRole('region',{name:'Puff Heritage'});
