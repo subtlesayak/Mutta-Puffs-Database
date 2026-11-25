@@ -6,6 +6,7 @@ import {dirname, resolve} from 'node:path';
 import {DatabaseSync} from 'node:sqlite';
 import {pathToFileURL} from 'node:url';
 import {parseSubmission, publicationReference} from './submissions.mjs';
+import {invalidObservationField, observationErrors} from '../src/lib/observation-fields.ts';
 import {isPublishedSubmission} from './publication.mjs';
 
 const statuses = new Set(['pending', 'approved', 'rejected', 'published']);
@@ -148,6 +149,10 @@ export function createCommunityServer({db, origins, moderatorToken, trustLocalPr
             throw new RequestError(409, 'Start a new contribution before submitting different details.');
           }
           return reply(200, {id, token, status:previous.status});
+        }
+        if (entry.kind === 'observation') {
+          const invalid = invalidObservationField(entry.fields);
+          if (invalid) throw new RequestError(422, observationErrors[invalid]);
         }
         limit(request, 'submission');
         const now = new Date().toISOString();

@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import {randomBytes, randomUUID} from 'node:crypto';
+import {createHash, randomBytes, randomUUID} from 'node:crypto';
 import test from 'node:test';
 import {createCommunityServer,openCommunityDatabase} from '../server/community.mjs';
 import {parseSubmission} from '../server/submissions.mjs';
@@ -67,6 +67,46 @@ test('anonymous submissions, retries, receipts and authenticated moderation', as
     assert.equal(published.status,200);
     assert.equal((await (await request(statusRoute,{token})).json()).reference,reference);
     assert.equal((await (await request(statusRoute,{token})).json()).submission,undefined);
+  } finally {
+    await new Promise(resolve=>server.close(resolve));
+    db.close();
+  }
+});
+
+test('new observations need usable prices and batch times while existing receipts can be retried', async () => {
+  const db = openCommunityDatabase(':memory:');
+  const server = createCommunityServer({db,origins:[origin],moderatorToken});
+  await new Promise((resolve,reject)=>server.listen(0,'127.0.0.1',resolve).once('error',reject));
+  const url = 'http://127.0.0.1:' + server.address().port + '/v1/submissions';
+  const observation = fields => ({
+    id:randomUUID(),token:randomBytes(32).toString('base64url'),consent:true,kind:'observation',
+    fields:{place_id:'mpdb-7b2be6dd7ad3',observed_on:'2026-01-01',...fields},
+  });
+  const submit = body => fetch(url,{method:'POST',headers:{'Content-Type':'application/json',Origin:origin},body:JSON.stringify(body)});
+  try {
+    const old = observation({price:'About twenty rupees'});
+    const stored = JSON.stringify({kind:old.kind,fields:old.fields,license:'CC BY 4.0'});
+    const receiptHash = createHash('sha256').update(old.token).digest('hex');
+    const time = '2026-01-02T00:00:00.000Z';
+    db.prepare('INSERT INTO submissions (id,receipt_hash,status,kind,payload,created_at,updated_at) VALUES (?,?,?,?,?,?,?)')
+      .run(old.id,receiptHash,'pending',old.kind,stored,time,time);
+    const retried = await submit(old);
+    assert.equal(retried.status,200);
+    assert.equal((await retried.json()).id,old.id);
+
+    const missingCurrency = await submit(observation({price:'25'}));
+    assert.equal(missingCurrency.status,422);
+    assert.match((await missingCurrency.json()).error,/currency code/);
+    assert.equal((await submit(observation({price:'0 INR'}))).status,422);
+    const invalidTime = await submit(observation({fresh_batch_times:'24:00'}));
+    assert.equal(invalidTime.status,422);
+    assert.match((await invalidTime.json()).error,/24-hour format/);
+    assert.equal((await submit(observation({fresh_batch_times:'08:00, 08:00'}))).status,422);
+
+    assert.equal((await submit(observation({price:'AED 2.50',fresh_batch_times:'08:00, 16:30'}))).status,201);
+    assert.equal((await submit(observation({price:'25 INR'}))).status,201);
+    assert.equal((await submit(observation({availability:'Sold out'}))).status,201);
+    assert.equal(db.prepare('SELECT COUNT(*) AS count FROM submissions').get().count,4);
   } finally {
     await new Promise(resolve=>server.close(resolve));
     db.close();

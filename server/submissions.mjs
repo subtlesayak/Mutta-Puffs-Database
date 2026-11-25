@@ -2,7 +2,7 @@ const fields = {
   place: {place_name: ['text', 200, true], area: ['text', 150, true], map_link: ['url', 650, true], details: ['text', 1000, true]},
   correction: {place_id: ['place', 40, true], correction: ['text', 900, true], evidence: ['url', 650], verified_on: ['date', 10]},
   review: {place_id: ['place', 40, true], visited_on: ['date', 10, true], pastry: ['score', 2, true], filling: ['score', 2, true], egg: ['score', 2, true], freshness: ['score', 2, true], value: ['score', 2, true], review_note: ['text', 900, true]},
-  observation: {place_id: ['place', 40, true], observed_on: ['date', 10, true], price: ['text', 35], egg_portion: [['Whole egg', 'Half egg', 'Eggless', 'Other'], 20], fresh_batch_times: ['times', 60], availability: [['Available', 'Sold out', 'No longer sold'], 30]},
+  observation: {place_id: ['place', 40, true], observed_on: ['date', 10, true], price: ['text', 35], egg_portion: [['Whole egg', 'Half egg', 'Eggless', 'Other'], 20], fresh_batch_times: ['text', 60], availability: [['Available', 'Sold out', 'No longer sold'], 30]},
   photo: {place_id: ['place', 40, true], photo_url: ['url', 650, true], alt: ['text', 250, true], credit: ['text', 120, true], captured_on: ['date', 10]},
   heritage: {story_title: ['text', 120, true], story: ['text', 1800, true], story_source: ['url', 650]},
 };
@@ -19,7 +19,6 @@ function matches(type, value) {
     return Number.isFinite(day.valueOf()) && day.toISOString().slice(0, 10) === value &&
       day.getTime() < Date.now() + 86_400_000;
   }
-  if (type === 'times') return /^(?:[01]\d|2[0-3]):[0-5]\d(?:\s*,\s*(?:[01]\d|2[0-3]):[0-5]\d)*$/.test(value);
   if (type === 'url') {
     try {
       const url = new URL(value);

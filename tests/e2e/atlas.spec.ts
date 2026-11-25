@@ -102,6 +102,36 @@ test('GitHub receives the completed contribution with a copyable draft on the at
   await expect(page.getByLabel('Issue body',{exact:true})).toHaveValue(body!);
 });
 
+test('dated observations validate the price and batch times before opening a GitHub draft', async ({page,context}) => {
+  await context.route('https://github.com/subtlesayak/Mutta-Puffs-Database/issues/new**',route =>
+    route.fulfill({status:200,contentType:'text/html',body:'<title>GitHub draft request</title>'}));
+  await page.goto('contribute/?kind=observation&place=mpdb-7b2be6dd7ad3');
+  const proceed = page.getByRole('button',{name:'Continue on GitHub'});
+  const price = page.getByRole('textbox',{name:'Price per puff',exact:true});
+  const times = page.getByRole('textbox',{name:'Fresh batch times',exact:true});
+  await page.getByLabel('Observation date').fill('2026-01-01');
+  await price.fill('25');
+  await proceed.click();
+  await expect(price).toBeFocused();
+  await expect(price).toHaveAttribute('aria-invalid','true');
+  await expect(price).toHaveAccessibleDescription(/positive amount and a three-letter currency code/);
+
+  await price.fill('25 INR');
+  await times.fill('4 pm');
+  await proceed.click();
+  await expect(times).toBeFocused();
+  await expect(times).toHaveAccessibleDescription(/enter each local batch time once/i);
+  await times.fill('08:00, 16:30');
+  const opening = page.waitForEvent('popup');
+  await proceed.click();
+  const popup = await opening;
+  await popup.waitForLoadState('domcontentloaded');
+  const body = new URL(popup.url()).searchParams.get('body');
+  expect(body).toContain('> 2026-01-01');
+  expect(body).toContain('> 25 INR');
+  expect(body).toContain('> 08:00, 16:30');
+});
+
 test('the Guide and Heritage pass automated accessibility and reflow checks', async ({page, isMobile}) => {
   await page.goto('guide/');
   if (isMobile) {
