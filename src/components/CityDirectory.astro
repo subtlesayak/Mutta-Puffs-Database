@@ -1,0 +1,27 @@
+---
+import Base from '../layouts/Base.astro';
+import Icon from './Icon.astro';
+import {atlas} from '../lib/catalogue';
+import {cityPath} from '../lib/format';
+import {directoryCopy, directoryCount} from '../lib/directory-copy';
+import {translatedPlaceName} from '../lib/place-search';
+import type {Locale} from '../lib/locales';
+
+interface Props {locale?: Locale}
+const {locale = 'en'} = Astro.props;
+const copy = directoryCopy[locale];
+const localName = (name: string) => translatedPlaceName(name,locale);
+---
+<Base title={copy.directoryTitle} section="Cities" description={copy.citiesIntro} locale={locale} languageRoute="cities/">
+  <div class="shell">
+    <header class="page-head"><p class="kicker">{copy.directoryTitle}</p><h1>{copy.citiesHeading}</h1><p>{copy.citiesIntro}</p></header>
+    <ul class="place-grid">
+      {atlas.cities.map(city => <li class="place-card">
+        <Icon name="pin" />
+        <h3><a href={cityPath(city.id,locale)}>{localName(city.name)}</a></h3>
+        <p class="muted">{[city.state,city.country].flatMap(name => name ? [localName(name)] : []).join(', ')}</p>
+        <p>{directoryCount(city.count,locale)}</p>
+      </li>)}
+    </ul>
+  </div>
+</Base>

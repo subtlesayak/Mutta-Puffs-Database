@@ -1,10 +1,15 @@
 import type {APIRoute} from 'astro';
 import {atlas} from '../lib/catalogue';
-import {path, cityPath, placePath, siteUrl} from '../lib/format';
+import {path, localizedPath, cityPath, placePath, siteUrl} from '../lib/format';
+import {locales} from '../lib/locales';
 
 export const GET: APIRoute = () => {
-  const pages = ['', 'map/', 'cities/', 'guide/', 'insights/', 'about/', 'contribute/', 'leaderboard/', 'price-index/', 'trails/', 'passport/', 'wrapped/', 'roulette/', 'heritage/', 'languages/', 'ml/', 'hi/', 'ta/', 'kn/'].map(path);
-  pages.push(...atlas.cities.map(city => cityPath(city.id)), ...atlas.places.map(place => placePath(place.id)), ...atlas.trails.map(trail => path('trails/' + trail.id + '/')));
+  const pages = ['map/', 'guide/', 'insights/', 'about/', 'contribute/', 'leaderboard/', 'price-index/', 'trails/', 'passport/', 'wrapped/', 'roulette/', 'heritage/', 'languages/'].map(path);
+  for (const {id:locale} of locales) {
+    pages.push(localizedPath('',locale), localizedPath('cities/',locale));
+    pages.push(...atlas.cities.map(city => cityPath(city.id,locale)), ...atlas.places.map(place => placePath(place.id,locale)));
+  }
+  pages.push(...atlas.trails.map(trail => path('trails/' + trail.id + '/')));
   const xml = '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
     + pages.map(page => '<url><loc>' + new URL(page,siteUrl.origin).href + '</loc></url>').join('\n')
     + '\n</urlset>\n';

@@ -17,11 +17,46 @@ test('all four localized finders accept native-script place queries', async ({pa
     await expect(page.locator('.metric-filters summary')).toHaveText(metrics);
     const card = page.locator('[data-results] li').filter({has:page.getByRole('link',{name:"Sam's Bakers",exact:true})});
     await expect(card).toBeVisible();
+    await expect(card.getByRole('link',{name:"Sam's Bakers",exact:true}))
+      .toHaveAttribute('href',new URL('places/' + examplePlace + '/',page.url()).pathname);
     await expect(card).toContainText(city);
     await expect(card.locator('.tags')).toContainText(pin);
     await expect(card.locator('[data-directions]')).toHaveText(directions);
     await expect(page.locator('.masthead .wordmark')).toHaveAttribute('href',new URL(page.url()).pathname);
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(page.viewportSize()!.width);
+  }
+});
+
+test('localized city directories lead to localized listings and keep the same listing when switching language', async ({page,isMobile,baseURL}) => {
+  const copy = [
+    {locale:'ml',nav:'നഗരങ്ങൾ',city:'ഹൈദരാബാദ്',directions:'എങ്ങനെ എത്താം',saved:'പാസ്‌പോർട്ടിൽ സൂക്ഷിച്ചു.'},
+    {locale:'hi',nav:'शहर',city:'हैदराबाद',directions:'कैसे पहुँचें',saved:'आपके पासपोर्ट में सहेजा गया।'},
+    {locale:'ta',nav:'நகரங்கள்',city:'ஹைதராபாத்',directions:'எப்படிச் செல்வது',saved:'உங்கள் பாஸ்போர்ட்டில் சேமிக்கப்பட்டது.'},
+    {locale:'kn',nav:'ನಗರಗಳು',city:'ಹೈದರಾಬಾದ್',directions:'ತಲುಪುವ ದಾರಿ',saved:'ನಿಮ್ಮ ಪಾಸ್‌ಪೋರ್ಟ್‌ನಲ್ಲಿ ಉಳಿಸಲಾಗಿದೆ.'},
+  ];
+  for (const {locale,nav,city,directions,saved} of copy) {
+    await page.goto(locale + '/');
+    if (isMobile) await page.locator('.mobile-menu summary').click();
+    const navigation = page.locator(isMobile ? '.navigation-mobile' : '.navigation-desktop');
+    await navigation.getByRole('link',{name:nav,exact:true}).click();
+    await expect(page).toHaveURL(new URL(locale + '/cities/',baseURL!).href);
+    await page.getByRole('link',{name:city,exact:true}).click();
+    await expect(page.locator('html')).toHaveAttribute('lang',locale);
+    await expect(page.getByRole('heading',{level:1})).toContainText(city);
+    await expect(page.locator('.city-actions a').last()).toHaveAttribute('href',new URL(locale + '/?city=hyderabad#nearby',baseURL!).pathname + '?city=hyderabad#nearby');
+    await page.getByRole('link',{name:"Sam's Bakers",exact:true}).click();
+    await expect(page).toHaveURL(new URL(locale + '/places/' + examplePlace + '/',baseURL!).href);
+    await expect(page.getByRole('heading',{name:directions,exact:true})).toBeVisible();
+    await expect(page.locator('link[rel=alternate][hreflang=en]')).toHaveAttribute('href',
+      'https://subtlesayak.github.io' + new URL('places/' + examplePlace + '/',baseURL!).pathname);
+    const bookmark = page.locator('[data-bookmark]');
+    await bookmark.click();
+    await expect(page.locator('[data-bookmark-status]')).toHaveText(saved);
+    await page.locator('#page-languages').getByRole('link',{name:'English',exact:true}).click();
+    await expect(page).toHaveURL(new URL('places/' + examplePlace + '/',baseURL!).href);
+    await expect(bookmark).toHaveAttribute('aria-pressed','true');
+    await bookmark.click();
+    await expect(bookmark).toHaveAttribute('aria-pressed','false');
   }
 });
 
@@ -95,9 +130,9 @@ test.describe('PWA',()=>{
         throw new DOMException('Storage is full','QuotaExceededError');
       };
     });
-    const response = await page.goto('cities/');
+    const response = await page.goto('cities/hyderabad/');
     expect(response?.fromServiceWorker()).toBe(true);
-    await expect(page.getByRole('heading',{name:'Pick a city.',exact:true})).toBeVisible();
+    await expect(page.getByRole('heading',{name:'Egg puffs near Hyderabad',exact:true})).toBeVisible();
     expect(await worker.evaluate(() => Reflect.get(globalThis,'atlasTestCacheWriteAttempts'))).toBeGreaterThan(0);
   });
   test('the homepage opens Puff Heritage while offline', async ({page,context}) => {
@@ -137,6 +172,8 @@ test.describe('PWA',()=>{
       await page.goto('ml/?q=' + encodeURIComponent('ഹൈദരാബാദ്'));
       await expect(page.getByRole('heading',{name:'അടുത്തുള്ള മുട്ട പഫ്സ് കണ്ടെത്താം',exact:true})).toBeVisible();
       await expect(page.locator('[data-results]')).toContainText("Sam's Bakers");
+      await page.goto('ml/cities/');
+      await expect(page.getByRole('heading',{name:'ഒരു നഗരം തിരഞ്ഞെടുക്കുക',exact:true})).toBeVisible();
     } finally {
       await context.setOffline(false);
     }

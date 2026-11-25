@@ -184,9 +184,9 @@ export function enablePlaceBookmark() {
     try {
       const saved = toggleSaved(localStorage,id,aliases).saved.includes(id);
       button.setAttribute('aria-pressed',String(saved));
-      status.textContent = saved ? 'Saved to your passport.' : 'Removed from saved places.';
+      status.textContent = (saved ? button.dataset.bookmarkSaved : button.dataset.bookmarkRemoved) ?? '';
     } catch {
-      status.textContent = 'Could not save this place. Open your passport to check site storage.';
+      status.textContent = button.dataset.bookmarkError ?? '';
     }
   });
 }

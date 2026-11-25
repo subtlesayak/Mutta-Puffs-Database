@@ -6,14 +6,17 @@ import '../styles/atlas.css';
 import Icon from '../components/Icon.astro';
 import {atlas} from '../lib/catalogue';
 import SiteNavigation from '../components/SiteNavigation.astro';
-import {github, path, siteUrl} from '../lib/format';
+import {github, localizedPath, path, siteUrl} from '../lib/format';
 import {guideDestinations} from '../lib/navigation';
 import {labelSets, locales, type Locale} from '../lib/locales';
 
-interface Props {title: string; description: string; section?: string; noindex?: boolean; locale?: Locale}
-const {title, description, section, noindex = false, locale = 'en'} = Astro.props;
+interface Props {title: string; description: string; section?: string; noindex?: boolean; locale?: Locale; languageRoute?: string}
+const {title, description, section, noindex = false, locale = 'en', languageRoute = section === 'Explore' ? '' : undefined} = Astro.props;
 const labels = labelSets[locale];
-const home = path(locale === 'en' ? '' : locale + '/');
+const home = localizedPath('',locale);
+const equivalents = languageRoute === undefined ? [] :
+  locales.map(language => ({...language,href:localizedPath(languageRoute,language.id)}));
+const languageHref = equivalents.length ? '#page-languages' : path('languages/');
 const fullTitle = section === 'Explore' && locale === 'en' ? 'Mutta Puffs Everywhere · The egg puff atlas' : title + ' · Mutta Puffs Everywhere';
 const canonical = new URL(Astro.url.pathname, siteUrl.origin);
 const activeSection = section ?? (guideDestinations.some(({route}) => canonical.pathname.startsWith(path(route))) ? 'Puff Guide' : undefined);
@@ -26,8 +29,7 @@ const activeSection = section ?? (guideDestinations.some(({route}) => canonical.
     <title>{fullTitle}</title>
     <meta name="description" content={description} />
     {noindex ? <meta name="robots" content="noindex" /> : <link rel="canonical" href={canonical} />}
-    {section === 'Explore' && locales.map(language => <link rel="alternate" hreflang={language.id}
-      href={new URL(path(language.id === 'en' ? '' : language.id + '/'),siteUrl.origin)} />)}
+    {equivalents.map(language => <link rel="alternate" hreflang={language.id} href={new URL(language.href,siteUrl.origin)} />)}
     <meta property="og:site_name" content="Mutta Puffs Everywhere" />
     <meta property="og:title" content={fullTitle} />
     <meta property="og:description" content={description} />
@@ -44,10 +46,10 @@ const activeSection = section ?? (guideDestinations.some(({route}) => canonical.
     <header class="masthead">
       <div class="shell header-inner">
         <a href={home} class="wordmark"><span class="brand-icon"><Icon name="puff" size={24} /></span><span>Mutta Puffs<small>Everywhere</small></span></a>
-        <SiteNavigation variant="desktop" pathname={canonical.pathname} activeSection={activeSection} locale={locale} />
+        <SiteNavigation variant="desktop" pathname={canonical.pathname} activeSection={activeSection} locale={locale} languageHref={languageHref} />
         <details class="mobile-menu">
           <summary class="button secondary small"><Icon name="menu" size={19} /> {labels.menu}</summary>
-          <SiteNavigation variant="mobile" pathname={canonical.pathname} activeSection={activeSection} locale={locale} />
+          <SiteNavigation variant="mobile" pathname={canonical.pathname} activeSection={activeSection} locale={locale} languageHref={languageHref} />
         </details>
       </div>
     </header>
@@ -61,9 +63,16 @@ const activeSection = section ?? (guideDestinations.some(({route}) => canonical.
           <a href={github}>GitHub</a>
         </nav>
       </div>
+      {equivalents.length > 0 && <nav class="shell page-languages" id="page-languages" aria-label={labels.language} tabindex="-1">
+        {equivalents.map(language => <a href={language.href} hreflang={language.id} lang={language.id} aria-current={language.id === locale ? 'page' : undefined}>{language.name}</a>)}
+      </nav>}
     </footer>
   </body>
 </html>
+<style>
+  .page-languages {display:flex;flex-wrap:wrap;gap:.15rem 1rem;padding-block:0 1.25rem;}
+  .page-languages a[aria-current="page"] {font-weight:800;text-decoration-thickness:.14em;}
+</style>
 <script>
   import {applyMapPreference} from '../lib/map-preference';
   import {startAnalytics} from '../scripts/analytics';

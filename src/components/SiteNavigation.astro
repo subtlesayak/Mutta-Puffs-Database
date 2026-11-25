@@ -1,6 +1,6 @@
 ---
 import Icon from './Icon.astro';
-import {path} from '../lib/format';
+import {localizedPath, path} from '../lib/format';
 import {labelSets, type Locale} from '../lib/locales';
 
 interface Props {
@@ -8,23 +8,24 @@ interface Props {
   pathname: string;
   activeSection?: string;
   locale: Locale;
+  languageHref: string;
 }
 
-const { variant, pathname, activeSection, locale } = Astro.props;
+const {variant, pathname, activeSection, locale, languageHref} = Astro.props;
 const labels = labelSets[locale];
 const links = [
-  ['Explore', locale === 'en' ? '' : locale + '/', labels.explore],
-  ['Puff Map', 'map/', labels.map],
-  ['Cities', 'cities/', labels.cities],
-  ['Puff Guide', 'guide/', labels.guide],
-  ['Insights', 'insights/', labels.insights],
-  ['Language', 'languages/', labels.language],
+  ['Explore', localizedPath('',locale), labels.explore, locale],
+  ['Puff Map', path('map/'), labels.map, 'en'],
+  ['Cities', localizedPath('cities/',locale), labels.cities, locale],
+  ['Puff Guide', path('guide/'), labels.guide, 'en'],
+  ['Insights', path('insights/'), labels.insights, 'en'],
+  ['Language', languageHref, labels.language, languageHref.startsWith('#') ? locale : 'en'],
 ];
 const contributeHref = path('contribute/');
 ---
 <nav class={`navigation-${variant}`} aria-label={labels.mainNav}>
-  {links.map(([section, route, label]) => (
-    <a href={path(route)} aria-current={pathname === path(route) ? 'page' : activeSection === section ? 'true' : undefined}>{label}</a>
+  {links.map(([section, destination, label, language]) => (
+    <a href={destination} hreflang={language} aria-current={pathname === destination ? 'page' : activeSection === section ? 'true' : undefined}>{label}</a>
   ))}
-  <a class="button small" href={contributeHref} aria-current={pathname === contributeHref ? 'page' : undefined}>{labels.contribute} <Icon name="arrow" size={16} /></a>
+  <a class="button small" href={contributeHref} hreflang="en" aria-current={pathname === contributeHref ? 'page' : undefined}>{labels.contribute} <Icon name="arrow" size={16} /></a>
 </nav>

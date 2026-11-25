@@ -24,7 +24,7 @@ function card(place: Place, provider: Provider, distance: number | null,
   const li = make('li', '', 'place-card');
   const name = make('h3');
   const detail = make('a', place.name);
-  detail.href = placePath(place.id);
+  detail.href = placePath(place.id,locale);
   name.append(detail);
   li.append(name, make('p', locality(place.location,name => translatedPlaceName(name,locale)) || copy.locationPending, 'muted'));
   if (distance !== null) {

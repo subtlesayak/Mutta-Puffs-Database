@@ -1,14 +1,16 @@
 import type {Accuracy, Location, Provider, Verification} from './types';
+import type {Locale} from './locales';
 
 const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
 export const siteUrl = new URL(base, 'https://subtlesayak.github.io');
 export const github = 'https://github.com/subtlesayak/Mutta-Puffs-Database';
 export const path = (route = '') => base + route.replace(/^\/+/, '');
-export const placePath = (id: string) => path('places/' + id + '/');
-export const cityPath = (id: string) => path('cities/' + id + '/');
+export const localizedPath = (route: string, locale: Locale) => path(locale === 'en' ? route : locale + '/' + route);
+export const placePath = (id: string, locale: Locale = 'en') => localizedPath('places/' + id + '/',locale);
+export const cityPath = (id: string, locale: Locale = 'en') => localizedPath('cities/' + id + '/',locale);
 export const formatNumber = (value: number) => new Intl.NumberFormat('en-IN').format(value);
 export const placeCount = (count: number) => formatNumber(count) + (count === 1 ? ' place' : ' places');
-export const formatDate = (value: string) => new Intl.DateTimeFormat('en-GB', {dateStyle: 'medium', timeZone: 'UTC'}).format(new Date(value + 'T00:00:00Z'));
+export const formatDate = (value: string, locale = 'en-GB') => new Intl.DateTimeFormat(locale, {dateStyle: 'medium', timeZone: 'UTC'}).format(new Date(value + 'T00:00:00Z'));
 export const formatPrice = (amount: number, currency: string, locale = 'en-IN') => new Intl.NumberFormat(locale, {style: 'currency', currency}).format(amount);
 export const accuracyLabels: Record<Accuracy, string> = {
   estimated: 'Estimated pin', source_pin: 'Original dropped pin', verified: 'Verified pin', unknown: 'Coordinates unknown',
