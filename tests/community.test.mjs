@@ -61,3 +61,53 @@ test('anonymous submissions, retries, receipts and authenticated moderation', as
     db.close();
   }
 });
+
+test('submission limits use a verified loopback proxy address only when enabled', async () => {
+  for (const trustLocalProxy of [false,true]) {
+    const db = openCommunityDatabase(':memory:');
+    const server = createCommunityServer({db,origins:[origin],moderatorToken,trustLocalProxy});
+    await new Promise((resolve,reject)=>server.listen(0,'127.0.0.1',resolve).once('error',reject));
+    const base = 'http://127.0.0.1:' + server.address().port;
+    const submit = ip => fetch(base + '/v1/submissions',{
+      method:'POST',
+      headers:{Origin:origin,'Content-Type':'application/json','X-MPDB-Client-IP':ip},
+      body:JSON.stringify({id:randomUUID(),token:randomBytes(32).toString('base64url'),consent:true,
+        kind:'heritage',fields:{story_title:'Test story',story:'A fixture for the submission limit.'}}),
+    });
+    try {
+      for (let attempt = 0; attempt < 8; attempt++) {
+        assert.equal((await submit('192.0.2.10')).status,201);
+      }
+      assert.equal((await submit('192.0.2.10')).status,429);
+      assert.equal((await submit('192.0.2.11')).status,trustLocalProxy ? 201 : 429);
+    } finally {
+      await new Promise(resolve=>server.close(resolve));
+      db.close();
+    }
+  }
+});
+
+test('the moderation queue reaches records beyond a full page with tied timestamps', async () => {
+  const db = openCommunityDatabase(':memory:');
+  const insert = db.prepare('INSERT INTO submissions (id,receipt_hash,status,kind,payload,created_at,updated_at) VALUES (?,?,?,?,?,?,?)');
+  const when = '2026-01-01T00:00:00.000Z';
+  const ids = Array.from({length:53}, () => randomUUID()).sort().reverse();
+  for (const id of ids) insert.run(id,'test-hash','pending','heritage','{"kind":"heritage","fields":{},"license":"CC BY 4.0"}',when,when);
+  const server = createCommunityServer({db,origins:[origin],moderatorToken});
+  await new Promise((resolve,reject)=>server.listen(0,'127.0.0.1',resolve).once('error',reject));
+  const url = 'http://127.0.0.1:' + server.address().port + '/v1/moderation/submissions';
+  const opts = {headers:{Authorization:'Bearer ' + moderatorToken}};
+  try {
+    const first = await (await fetch(url,opts)).json();
+    assert.deepEqual(first.submissions.map(item=>item.id),ids.slice(0,50));
+    assert.equal(first.next,ids[49]);
+    db.prepare('UPDATE submissions SET status = ? WHERE id = ?').run('approved',first.next);
+    const next = await (await fetch(url + '?before=' + first.next,opts)).json();
+    assert.deepEqual(next.submissions.map(item=>item.id),ids.slice(50));
+    assert.equal(next.next,null);
+    assert.equal((await fetch(url + '?before=invalid',opts)).status,400);
+  } finally {
+    await new Promise(resolve=>server.close(resolve));
+    db.close();
+  }
+});
