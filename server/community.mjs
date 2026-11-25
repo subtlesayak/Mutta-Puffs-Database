@@ -1,6 +1,7 @@
 import {createHash, createHmac, randomBytes, timingSafeEqual} from 'node:crypto';
 import {createServer} from 'node:http';
 import {mkdirSync} from 'node:fs';
+import {isIP} from 'node:net';
 import {dirname, resolve} from 'node:path';
 import {DatabaseSync} from 'node:sqlite';
 import {pathToFileURL} from 'node:url';
@@ -20,6 +21,8 @@ const syncBodyLimit = 3_000_000;
 const syncSlot = /^\/v1\/passport-sync\/([A-Za-z0-9_-]{43})$/;
 const requestId = /^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/;
 const receiptToken = /^[a-zA-Z0-9_-]{43}$/;
+const loopback = new Set(['127.0.0.1','::1','::ffff:127.0.0.1']);
+const queuePageSize = 50;
 
 class RequestError extends Error {
   constructor(status, message) {
@@ -57,7 +60,7 @@ export function openCommunityDatabase(filename) {
       payload TEXT NOT NULL, created_at TEXT NOT NULL, updated_at TEXT NOT NULL,
       reference TEXT, reason TEXT
     );
-    CREATE INDEX IF NOT EXISTS submissions_status ON submissions(status, created_at DESC);
+    CREATE INDEX IF NOT EXISTS submissions_queue ON submissions(status, created_at DESC, id DESC);
     CREATE TABLE IF NOT EXISTS passport_sync (
       id TEXT PRIMARY KEY, auth_hash TEXT NOT NULL, revision INTEGER NOT NULL,
       nonce TEXT NOT NULL, ciphertext TEXT NOT NULL, updated_at TEXT NOT NULL
@@ -66,7 +69,7 @@ export function openCommunityDatabase(filename) {
   return db;
 }
 
-export function createCommunityServer({db, origins, moderatorToken}) {
+export function createCommunityServer({db, origins, moderatorToken, trustLocalProxy = false}) {
   if (Buffer.byteLength(moderatorToken ?? '') < 32) throw new Error('Set MPDB_MODERATOR_TOKEN to a secret of at least 32 bytes.');
   if (!origins.length || origins.some(origin => new URL(origin).origin !== origin)) throw new Error('Set MPDB_ALLOWED_ORIGINS to exact browser origins.');
   const allowedOrigins = new Set(origins);
@@ -75,19 +78,23 @@ export function createCommunityServer({db, origins, moderatorToken}) {
   const read = db.prepare('SELECT * FROM submissions WHERE id = ?');
   const write = db.prepare('INSERT INTO submissions (id, receipt_hash, status, kind, payload, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)');
   const update = db.prepare('UPDATE submissions SET status = ?, updated_at = ?, reference = ?, reason = ? WHERE id = ? AND status = ?');
-  const list = db.prepare('SELECT * FROM submissions WHERE status = ? ORDER BY created_at DESC LIMIT 50');
+  const list = db.prepare('SELECT * FROM submissions WHERE status = ? AND (created_at, id) < (?, ?) ORDER BY created_at DESC, id DESC LIMIT ?');
   const readSync = db.prepare('SELECT * FROM passport_sync WHERE id = ?');
   const createSync = db.prepare('INSERT OR IGNORE INTO passport_sync VALUES (?, ?, 1, ?, ?, ?)');
   const updateSync = db.prepare('UPDATE passport_sync SET revision = revision + 1, nonce = ?, ciphertext = ?, updated_at = ? WHERE id = ? AND revision = ?');
   const removeSync = db.prepare('DELETE FROM passport_sync WHERE id = ?');
   const receipt = row => ({id:row.id, status:row.status, created_at:row.created_at, updated_at:row.updated_at, reference:row.reference, reason:row.reason});
 
-  function limit(request) {
+  function limit(request, operation) {
     const bucket = Math.floor(Date.now() / 600_000);
-    const key = createHmac('sha256', salt).update(request.socket.remoteAddress ?? 'local').digest('hex');
+    const address = request.socket.remoteAddress ?? 'local';
+    const forwarded = request.headers['x-mpdb-client-ip'];
+    const client = trustLocalProxy && loopback.has(address) && typeof forwarded === 'string' && isIP(forwarded)
+      ? forwarded.toLowerCase() : address;
+    const key = createHmac('sha256', salt).update(operation + ':' + client).digest('hex');
     const entry = limits.get(key);
     const count = entry?.bucket === bucket ? entry.count + 1 : 1;
-    if (count > 8) throw new RequestError(429, 'Too many submissions. Wait a few minutes and try again.');
+    if (count > 8) throw new RequestError(429, 'Too many requests. Wait a few minutes and try again.');
     if (limits.size >= 2048 && !entry) limits.delete(limits.keys().next().value);
     limits.set(key, {bucket, count});
   }
@@ -137,7 +144,7 @@ export function createCommunityServer({db, origins, moderatorToken}) {
           }
           return reply(200, {id, token, status:previous.status});
         }
-        limit(request);
+        limit(request, 'submission');
         const now = new Date().toISOString();
         write.run(id, hashed, 'pending', entry.kind, payload, now, now);
         return reply(201, {id, token, status:'pending'});
@@ -156,7 +163,7 @@ export function createCommunityServer({db, origins, moderatorToken}) {
           if (row) removeSync.run(id);
           return reply(200,{deleted:true});
         }
-        limit(request);
+        limit(request, 'passport');
         const snapshot = await jsonBody(request,syncBodyLimit);
         if (!snapshot || !Number.isSafeInteger(snapshot.revision) || snapshot.revision < 0 ||
             typeof snapshot.nonce !== 'string' || !/^[A-Za-z0-9_-]{16}$/.test(snapshot.nonce) ||
@@ -183,7 +190,13 @@ export function createCommunityServer({db, origins, moderatorToken}) {
         if (url.pathname === '/v1/moderation/submissions' && request.method === 'GET') {
           const status = url.searchParams.get('status') ?? 'pending';
           if (!statuses.has(status)) throw new RequestError(400, 'Choose a valid status.');
-          return reply(200, {submissions:list.all(status).map(row => ({...receipt(row), submission:JSON.parse(row.payload)}))});
+          const before = url.searchParams.get('before');
+          const anchor = before && requestId.test(before) ? read.get(before) : null;
+          if (before !== null && !anchor) throw new RequestError(400, 'Refresh the queue before loading more submissions.');
+          const rows = list.all(status, anchor?.created_at ?? '\uffff', anchor?.id ?? '', queuePageSize + 1);
+          const next = rows.length > queuePageSize ? rows[queuePageSize - 1].id : null;
+          const submissions = rows.slice(0, queuePageSize).map(row => ({...receipt(row), submission:JSON.parse(row.payload)}));
+          return reply(200, {submissions,next});
         }
         const item = /^\/v1\/moderation\/submissions\/([a-f0-9-]{36})$/.exec(url.pathname);
         if (item && request.method === 'PATCH') {
@@ -215,7 +228,10 @@ if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1]
   const filename = resolve(process.env.MPDB_DATABASE_PATH ?? '.community/atlas.sqlite');
   mkdirSync(dirname(filename), {recursive:true, mode:0o700});
   const origins = (process.env.MPDB_ALLOWED_ORIGINS ?? '').split(',').map(origin => origin.trim()).filter(Boolean);
-  const server = createCommunityServer({db:openCommunityDatabase(filename),origins,moderatorToken:process.env.MPDB_MODERATOR_TOKEN});
+  const server = createCommunityServer({
+    db:openCommunityDatabase(filename), origins, moderatorToken:process.env.MPDB_MODERATOR_TOKEN,
+    trustLocalProxy:process.env.MPDB_TRUST_LOCAL_PROXY === '1',
+  });
   const port = Number(process.env.PORT ?? '8787');
   const host = process.env.MPDB_HOST ?? '127.0.0.1';
   server.listen(port, host, () => console.log('Community API listening at http://' + host + ':' + port));

@@ -81,7 +81,6 @@ test('the review form supports keyboard ratings', async ({page}) => {
 test('GitHub receives the completed contribution with a copyable draft on the atlas', async ({page, context}) => {
   await page.goto('contribute/');
   const continueButton = page.getByRole('button',{name:'Continue on GitHub'});
-  test.skip(await continueButton.count() === 0, 'The community API is enabled on this build.');
   let draftRequest: URL | undefined;
   await context.route('https://github.com/subtlesayak/Mutta-Puffs-Database/issues/new**', async route => {
     draftRequest = new URL(route.request().url());

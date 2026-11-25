@@ -68,8 +68,8 @@ const scores = [['pastry','Pastry and flakiness'],['filling','Masala and filling
         </fieldset>
         <fieldset class="contribution-fields" data-kind="photo" hidden disabled>
           <legend>Your original photo</legend>
-          <p>{communityConfigured ? 'Add a public link to a photo you took.' : 'Attach a photo you took in the GitHub form or add a public link.'} Remove location metadata and keep identifiable people out of the frame.</p>
-          <label class="field">Public image link <input name="photo_url" type="url" maxlength="650" required={communityConfigured} placeholder={communityConfigured ? 'https://…' : 'Optional if attaching on GitHub'} /></label>
+          <p>Add a public link to a photo you took, or attach the photo in GitHub. Remove location metadata and keep identifiable people out of the frame.</p>
+          <label class="field">Public image link <input name="photo_url" type="url" maxlength="650" placeholder="https://…" /></label>
           <label class="field">Describe the photo <textarea name="alt" maxlength="250" required placeholder="What should a reader know about the image?"></textarea></label>
           <label class="field">Photographer credit <input name="credit" maxlength="120" required /></label>
           <label class="field">Date taken <input name="captured_on" type="date" /></label>
@@ -80,10 +80,11 @@ const scores = [['pastry','Pastry and flakiness'],['filling','Masala and filling
           <label class="field">Your story <textarea name="story" maxlength="1800" required placeholder="Name the bakery or region and say how you know the story."></textarea></label>
           <label class="field">Reference or interview link <input name="story_source" type="url" maxlength="650" /></label>
         </fieldset>
-        {communityConfigured && <label class="check"><input name="publication_consent" type="checkbox" required /> I can share this contribution under CC BY 4.0 and understand that approved entries are published openly.</label>}
+        {communityConfigured && <label class="check"><input name="publication_consent" type="checkbox" /> I can share this contribution under CC BY 4.0 and understand that approved entries are published openly.</label>}
         <p data-form-error role="alert"></p>
         <div class="actions">
-          <button class="button" type="submit">{communityConfigured ? 'Send for review' : 'Continue on GitHub'} <Icon name={communityConfigured ? 'arrow' : 'external'} size={18} /></button>
+          {communityConfigured && <button class="button" type="submit" data-community-submit>Send for review <Icon name="arrow" size={18} /></button>}
+          <button class:list={['button',{secondary:communityConfigured}]} type="submit" data-github-submit>Continue on GitHub <Icon name="external" size={18} /></button>
           <button class="button secondary" type="button" data-save-draft>Save draft on this device</button>
           <button class="button secondary" type="button" data-clear-draft hidden>Remove saved draft</button>
           <button class="button secondary" type="button" data-undo-draft hidden>Undo draft removal</button>
@@ -164,7 +165,7 @@ const scores = [['pastry','Pastry and flakiness'],['filling','Masala and filling
   import {githubDraft, type ContributionKind} from '../lib/github-draft';
   import {track} from '../scripts/analytics';
   import {pagePlaceAliases, resolvePlaceId} from '../lib/place-identity';
-  import {communityConfigured, communityRequest, type Receipt} from '../lib/community';
+  import {communityRequest, type Receipt} from '../lib/community';
   const form = document.querySelector<HTMLFormElement>('[data-contribution]')!;
   const kind = form.querySelector<HTMLSelectElement>('#kind')!;
   const listing = form.querySelector<HTMLSelectElement>('[name=place_id]')!;
@@ -341,7 +342,8 @@ const scores = [['pastry','Pastry and flakiness'],['filling','Masala and filling
   const receiptField = receiptForm?.querySelector<HTMLInputElement>('input') ?? null;
   const receiptStatus = document.querySelector<HTMLElement>('[data-receipt-status]');
   const publication = document.querySelector<HTMLAnchorElement>('[data-publication-link]');
-  const sending = form.querySelector<HTMLButtonElement>('[type=submit]')!;
+  const sending = form.querySelector<HTMLButtonElement>('[data-community-submit]');
+  const githubSubmit = form.querySelector<HTMLButtonElement>('[data-github-submit]')!;
   receiptForm?.addEventListener('submit', async event => {
     event.preventDefault();
     if (!receiptField || !receiptStatus || !publication) return;
@@ -373,13 +375,23 @@ const scores = [['pastry','Pastry and flakiness'],['filling','Masala and filling
       alert.textContent = 'Add at least one detail about price, egg portion, batch time, or availability.';
       return;
     }
-    if (communityConfigured) {
-      const consent = data.get('publication_consent') === 'on';
+    if (sending && event.submitter !== githubSubmit) {
+      if (sending.disabled) return;
+      if (kind.value === 'photo' && !String(data.get('photo_url') ?? '').trim()) {
+        alert.textContent = 'Add a public image link to send for review, or attach the photo in GitHub.';
+        field('photo_url')?.focus();
+        return;
+      }
+      if (data.get('publication_consent') !== 'on') {
+        alert.textContent = 'Confirm permission to publish before sending for review.';
+        field('publication_consent')?.focus();
+        return;
+      }
       data.delete('publication_consent');
-      sending.disabled = true;
+      sending.disabled = githubSubmit.disabled = true;
       try {
         const fields = Object.fromEntries([...data].filter(([,value])=>String(value).trim()));
-        const submission = {kind:kind.value,fields,consent};
+        const submission = {kind:kind.value,fields,consent:true};
         const signature = JSON.stringify(submission);
         if (lastRequest?.signature !== signature) {
           const secret = crypto.getRandomValues(new Uint8Array(32));
@@ -397,9 +409,10 @@ const scores = [['pastry','Pastry and flakiness'],['filling','Masala and filling
         receiptField?.focus();
         receiptField?.select();
       } catch (error) {
-        alert.textContent = error instanceof Error ? error.message : 'Could not send the contribution. You can save the draft and try again.';
+        const message = error instanceof Error ? error.message : 'Could not send the contribution.';
+        alert.textContent = message + ' Your draft is still here. You can retry or continue on GitHub.';
       } finally {
-        sending.disabled = false;
+        sending.disabled = githubSubmit.disabled = false;
       }
       return;
     }
