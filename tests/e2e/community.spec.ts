@@ -5,7 +5,11 @@ import {createCommunityServer,openCommunityDatabase} from '../../server/communit
 test('account-free submissions, moderation, and encrypted Passport sync', async ({page,context,baseURL,browser}) => {
   const moderator = randomBytes(32).toString('base64url');
   const db = openCommunityDatabase(':memory:');
-  const api = createCommunityServer({db,origins:[new URL(baseURL!).origin],moderatorToken:moderator});
+  const source = 'https://github.com/subtlesayak/Mutta-Puffs-Database/issues/101';
+  let listed = false;
+  const api = createCommunityServer({db,origins:[new URL(baseURL!).origin],moderatorToken:moderator,fetchAtlas:async () => Response.json({
+    schema_version:1,places:listed ? [{name:'Example puff shop',source:{kind:'community',reference:source}}] : [],
+  })});
   await new Promise<void>((resolve,reject) => api.listen(0,'127.0.0.1',resolve).once('error',reject));
   try {
     const address = api.address();
@@ -65,6 +69,16 @@ test('account-free submissions, moderation, and encrypted Passport sync', async 
     expect(new URL(draft!).searchParams.get('body')).toContain('https://maps.example/test-pin');
     await page.getByRole('button',{name:'Check status'}).click();
     await expect(page.locator('[data-receipt-status]')).toContainText('approved and waiting to be published');
+    await review.getByLabel('GitHub source in the live atlas').fill(source);
+    const verify = review.getByRole('button',{name:'Verify publication'});
+    await verify.click();
+    await expect(review.locator('[data-moderation-status]')).toContainText('does not show this contribution');
+    listed = true;
+    await verify.click();
+    await expect(review.locator('[data-moderation-status]')).toContainText('There are no submissions');
+    await page.getByRole('button',{name:'Check status'}).click();
+    await expect(page.locator('[data-receipt-status]')).toContainText('Your submission was published');
+    await expect(page.getByRole('link',{name:'Open the published record'})).toHaveAttribute('href',source);
 
     const note = 'Private visit for the encrypted sync test.';
     const backup = {format:'mutta-puffs-passport',version:1,passport:{

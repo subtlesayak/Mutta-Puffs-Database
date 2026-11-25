@@ -6,6 +6,7 @@ import {dirname, resolve} from 'node:path';
 import {DatabaseSync} from 'node:sqlite';
 import {pathToFileURL} from 'node:url';
 import {parseSubmission, publicationReference} from './submissions.mjs';
+import {isPublishedSubmission} from './publication.mjs';
 
 const statuses = new Set(['pending', 'approved', 'rejected', 'published']);
 const transitions = {
@@ -73,7 +74,7 @@ export function communityDatabasePath() {
   return resolve(process.env.MPDB_DATABASE_PATH ?? '.community/atlas.sqlite');
 }
 
-export function createCommunityServer({db, origins, moderatorToken, trustLocalProxy = false}) {
+export function createCommunityServer({db, origins, moderatorToken, trustLocalProxy = false, fetchAtlas = fetch}) {
   if (Buffer.byteLength(moderatorToken ?? '') < 32) throw new Error('Set MPDB_MODERATOR_TOKEN to a secret of at least 32 bytes.');
   if (!origins.length || origins.some(origin => new URL(origin).origin !== origin)) throw new Error('Set MPDB_ALLOWED_ORIGINS to exact browser origins.');
   const allowedOrigins = new Set(origins);
@@ -81,7 +82,7 @@ export function createCommunityServer({db, origins, moderatorToken, trustLocalPr
   const salt = randomBytes(32);
   const read = db.prepare('SELECT * FROM submissions WHERE id = ?');
   const write = db.prepare('INSERT INTO submissions (id, receipt_hash, status, kind, payload, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)');
-  const update = db.prepare('UPDATE submissions SET status = ?, updated_at = ?, reference = ?, reason = ? WHERE id = ? AND status = ?');
+  const update = db.prepare('UPDATE submissions SET status = ?, updated_at = ?, reference = ?, reason = ? WHERE id = ? AND status = ? AND updated_at = ?');
   const list = db.prepare('SELECT * FROM submissions WHERE status = ? AND (created_at, id) < (?, ?) ORDER BY created_at DESC, id DESC LIMIT ?');
   const readSync = db.prepare('SELECT * FROM passport_sync WHERE id = ?');
   const createSync = db.prepare('INSERT OR IGNORE INTO passport_sync VALUES (?, ?, 1, ?, ?, ?)');
@@ -210,11 +211,20 @@ export function createCommunityServer({db, origins, moderatorToken, trustLocalPr
           if (!decision || !transitions[row.status]?.has(decision.status)) throw new RequestError(409, 'Reload this submission before changing its status.');
           const reason = typeof decision.reason === 'string' ? decision.reason.trim() : '';
           if (reason.length > 500) throw new RequestError(422, 'Shorten the moderation note to 500 characters.');
-          const reference = decision.status === 'published' ? decision.reference : null;
-          if (decision.status === 'published' && (typeof reference !== 'string' || !publicationReference.test(reference))) {
-            throw new RequestError(422, 'Add the GitHub issue or pull request for the published record.');
+          let reference = null;
+          if (decision.status === 'published') {
+            reference = typeof decision.reference === 'string' ? decision.reference.trim() : '';
+            if (!publicationReference.test(reference)) {
+              throw new RequestError(422, 'Add the GitHub issue or pull request for the published record.');
+            }
+            let exists;
+            try {exists = await isPublishedSubmission(JSON.parse(row.payload),reference,fetchAtlas);}
+            catch {throw new RequestError(503, 'Could not verify the published atlas. Try again when the site is available.');}
+            if (!exists) {
+              throw new RequestError(409, 'The public atlas does not show this contribution with that reference yet. Check the source link and wait for the Pages deployment.');
+            }
           }
-          if (update.run(decision.status, new Date().toISOString(), reference, reason || null, row.id, row.status).changes !== 1) {
+          if (update.run(decision.status, new Date().toISOString(), reference, reason || null, row.id, row.status, row.updated_at).changes !== 1) {
             throw new RequestError(409, 'This submission changed. Refresh the queue.');
           }
           return reply(200, receipt(read.get(row.id)));

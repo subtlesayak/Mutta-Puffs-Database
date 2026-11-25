@@ -23,7 +23,12 @@ test('submission formats validate consent, scores, dates and public evidence', (
 
 test('anonymous submissions, retries, receipts and authenticated moderation', async () => {
   const db = openCommunityDatabase(':memory:');
-  const server = createCommunityServer({db,origins:[origin],moderatorToken});
+  const reference = 'https://github.com/subtlesayak/Mutta-Puffs-Database/pull/1';
+  let heritagePage = new Response('<footer><a href="' + reference + '">Repository mention</a></footer>');
+  const server = createCommunityServer({db,origins:[origin],moderatorToken, fetchAtlas: async url => {
+    assert.equal(url.href,origin + '/Mutta-Puffs-Database/heritage/');
+    return heritagePage;
+  }});
   await new Promise((resolve,reject)=>server.listen(0,'127.0.0.1',resolve).once('error',reject));
   const base = 'http://127.0.0.1:' + server.address().port;
   const request = (route, {method='GET',body,token,requestOrigin=origin}={}) => fetch(base + route, {
@@ -51,7 +56,13 @@ test('anonymous submissions, retries, receipts and authenticated moderation', as
     assert.equal(approve.status,200);
     const withoutEvidence = await request(queue + '/' + id,{method:'PATCH',token:moderatorToken,body:{status:'published'}});
     assert.equal(withoutEvidence.status,422);
-    const reference = 'https://github.com/subtlesayak/Mutta-Puffs-Database/pull/1';
+    const decision = {status:'published',reference};
+    const missing = await request(queue + '/' + id,{method:'PATCH',token:moderatorToken,body:decision});
+    assert.equal(missing.status,409);
+    heritagePage = new Response('',{status:503});
+    assert.equal((await request(queue + '/' + id,{method:'PATCH',token:moderatorToken,body:decision})).status,503);
+    assert.equal((await (await request(statusRoute,{token})).json()).status,'approved');
+    heritagePage = new Response('<article><h3>Test fixture</h3><a href="' + reference + '">Contributor’s story</a></article>');
     const published = await request(queue + '/' + id,{method:'PATCH',token:moderatorToken,body:{status:'published',reference}});
     assert.equal(published.status,200);
     assert.equal((await (await request(statusRoute,{token})).json()).reference,reference);
