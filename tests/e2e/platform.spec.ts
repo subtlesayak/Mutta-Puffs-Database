@@ -1,17 +1,6 @@
-import {expect,test,type APIRequestContext} from '@playwright/test';
+import {expect,test} from '@playwright/test';
 
 const examplePlace = 'mpdb-7b2be6dd7ad3';
-
-async function exampleGpx(request: APIRequestContext) {
-  const response = await request.get('api/v1/places.json');
-  const {places} = await response.json();
-  const {latitude,longitude} = places.find((place:{id:string})=>place.id === examplePlace).location;
-  const gpx = '<gpx xmlns="http://www.topografix.com/GPX/1/1"><trk><trkseg>' +
-    '<trkpt lat="' + latitude + '" lon="' + (longitude - .01) + '"/>' +
-    '<trkpt lat="' + latitude + '" lon="' + (longitude + .01) + '"/>' +
-    '</trkseg></trk></gpx>';
-  return {name:'route.gpx',mimeType:'application/gpx+xml',buffer:Buffer.from(gpx)};
-}
 
 test('all four localized finders accept native-script place queries', async ({page}) => {
   const copy: Record<string,string[]> = {
@@ -102,28 +91,28 @@ test('localized maps keep city and district filters across languages and link ba
   }
 });
 
-test('GPX pit stops return the same listings and distances with and without the worker', async ({page,request}) => {
-  const gpx = await exampleGpx(request);
-  await page.goto('pit-stops/');
-  const file = page.getByLabel('GPX route or track');
-  const search = page.getByRole('button',{name:'Find pit stops'});
-  const starts = page.waitForEvent('worker');
-  await file.setInputFiles(gpx);
-  await search.click();
-  expect((await starts).url()).toContain('pit-stops-worker');
-  const shop = page.getByRole('link',{name:"Sam's Bakers",exact:true});
-  await expect(shop).toBeVisible();
-  const stops = page.locator('[data-route-results] li');
-  const distances = await stops.allTextContents();
-
-  await page.addInitScript(() => {
-    Object.defineProperty(window,'Worker',{value:undefined});
-  });
-  await page.reload();
-  await file.setInputFiles(gpx);
-  await search.click();
-  await expect(shop).toBeVisible();
-  expect(await stops.allTextContents()).toEqual(distances);
+test('localized guides keep the language on available destinations', async ({page,baseURL,isMobile}) => {
+  const cases = [
+    ['ml','പഫ് ഗൈഡ്','ഇംഗ്ലീഷിൽ'],
+    ['hi','पफ गाइड','अंग्रेज़ी में'],
+    ['ta','பஃப் வழிகாட்டி','ஆங்கிலத்தில்'],
+    ['kn','ಪಫ್ ಮಾರ್ಗದರ್ಶಿ','ಇಂಗ್ಲಿಷ್‌ನಲ್ಲಿ'],
+  ];
+  for (const [locale,guide,inEnglish] of cases) {
+    await page.goto(locale + '/');
+    const header = page.locator('.masthead');
+    if (isMobile) await header.locator('.mobile-menu summary').click();
+    await header.getByRole('link',{name:guide,exact:true}).click();
+    await expect(page).toHaveURL(new URL(locale + '/guide/',baseURL!).href);
+    await expect(page.getByRole('heading',{name:guide,exact:true})).toBeVisible();
+    await expect(page.locator('.guide-grid a[href$="/heritage/"]')).toContainText(inEnglish);
+    await expect(page.locator('.guide-grid a[href*="pit-stops"]')).toHaveCount(0);
+    const missions = page.locator('.guide-grid a[href$="/missions/"]');
+    await expect(missions).toHaveAttribute('hreflang',locale);
+    await missions.click();
+    await expect(page).toHaveURL(new URL(locale + '/missions/',baseURL!).href);
+    await expect(page.locator('html')).toHaveAttribute('lang',locale);
+  }
 });
 
 test('passport imports private visits, shares collections and exports a recap PNG', async ({page}) => {
@@ -167,20 +156,17 @@ test('the offline atlas can load the GeoJSON outline if the compact asset is mis
 
 test.describe('PWA',()=>{
   test.use({serviceWorkers:'allow'});
-  test('a fresh offline atlas can search a GPX using the cached worker', async ({page,context,request}) => {
-    const gpx = await exampleGpx(request);
+  test('each localized guide opens from a fresh offline cache', async ({page,context}) => {
     await page.goto('./');
     await expect.poll(() => page.evaluate(() => Boolean(navigator.serviceWorker.controller))).toBe(true);
     try {
       await context.setOffline(true);
-      await page.goto('pit-stops/');
-      await page.getByLabel('GPX route or track').setInputFiles(gpx);
-      const starts = page.waitForEvent('worker');
-      await page.getByRole('button',{name:'Find pit stops'}).click();
-      const worker = await starts;
-      expect(worker.url()).toContain('pit-stops-worker');
-      await expect(page.getByRole('link',{name:"Sam's Bakers",exact:true})).toBeVisible();
-      expect(await page.evaluate(url => caches.match(url).then(Boolean),worker.url())).toBe(true);
+      for (const locale of ['en', 'ml', 'hi', 'ta', 'kn']) {
+        const guide = await page.goto((locale === 'en' ? '' : locale + '/') + 'guide/');
+        expect(guide?.fromServiceWorker()).toBe(true);
+        await expect(page.locator('html')).toHaveAttribute('lang',locale);
+        await expect(page.locator('.guide-grid a')).toHaveCount(8);
+      }
     } finally {
       await context.setOffline(false);
     }

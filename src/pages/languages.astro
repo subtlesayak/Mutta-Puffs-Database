@@ -7,7 +7,7 @@ import {locales} from '../lib/locales';
   <div class="shell">
     <header class="page-head">
       <h1>Choose a language</h1>
-      <p>The place finder, Puff Map, city directories, bakery listings and contribution form are available in five languages. Bakery names and contributor notes appear as shared.</p>
+      <p>Find bakeries, browse Puff Guide and contribute in five languages. Bakery names and contributor notes appear as shared.</p>
     </header>
     <ul class="tile-grid">
       {locales.map(locale => <li class="panel"><a class="text-link" data-language-choice href={path(locale.id === 'en' ? '' : locale.id + '/')} lang={locale.id} hreflang={locale.id}>{locale.name}</a></li>)}

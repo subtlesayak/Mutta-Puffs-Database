@@ -1,0 +1,12 @@
+---
+import PuffGuide from '../../components/PuffGuide.astro';
+import {locales, type Locale} from '../../lib/locales';
+
+export function getStaticPaths() {
+  return locales.filter(locale => locale.id !== 'en').map(locale => ({
+    params:{language:locale.id}, props:{locale:locale.id},
+  }));
+}
+const {locale} = Astro.props as {locale:Locale};
+---
+<PuffGuide locale={locale} />

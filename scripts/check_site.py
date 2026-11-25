@@ -25,13 +25,12 @@ def check():
     cities = json.loads((DIST / "api/v1/cities.json").read_text())["cities"]
     trails = json.loads((DIST / "api/v1/trails.json").read_text())["trails"]
     for route in ("", "map/", "cities/", "insights/", "about/", "contribute/", "analysis/", "share/", "offline/",
-                  "guide/", "leaderboard/", "price-index/", "trails/", "pit-stops/", "missions/", "heritage/", "passport/", "roulette/", "wrapped/", "languages/", "ml/", "hi/", "ta/", "kn/"):
+                  "guide/", "leaderboard/", "price-index/", "trails/", "missions/", "heritage/", "passport/", "roulette/", "wrapped/", "languages/", "ml/", "hi/", "ta/", "kn/"):
         assert (DIST / route / "index.html").is_file(), route
     for locale in ("", "ml", "hi", "ta", "kn"):
-        assert (DIST / locale / "cities" / "index.html").is_file(), locale
-        assert (DIST / locale / "map" / "index.html").is_file(), locale
-        assert (DIST / locale / "contribute" / "index.html").is_file(), locale
-        assert (DIST / locale / "missions" / "index.html").is_file(), locale
+        for route in ("cities", "map", "contribute", "missions", "guide"):
+            target = DIST / locale / route / "index.html"
+            assert target.is_file(), target.relative_to(DIST)
         for group, records in (("places", places), ("cities", cities)):
             for record in records:
                 target = DIST / locale / group / record["id"] / "index.html"
