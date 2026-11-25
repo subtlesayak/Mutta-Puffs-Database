@@ -61,9 +61,19 @@ const scores = [['pastry','Pastry and flakiness'],['filling','Masala and filling
         <fieldset class="contribution-fields" data-kind="observation" hidden disabled>
           <legend>What you observed</legend>
           <label class="field">Observation date <input name="observed_on" type="date" required /></label>
-          <label class="field">Price per puff <input name="price" maxlength="35" placeholder="Amount and currency" /></label>
+          <div class="field">
+            <label for="observation-price">Price per puff</label>
+            <input id="observation-price" name="price" maxlength="35" placeholder="25 INR" aria-describedby="observation-price-help observation-price-error" data-observation-input />
+            <small id="observation-price-help">Include the amount and three-letter currency code.</small>
+            <small id="observation-price-error" class="field-error" hidden></small>
+          </div>
           <label class="field">Egg portion <select name="egg_portion"><option value="">Select if known</option><option>Whole egg</option><option>Half egg</option><option>Eggless</option><option>Other</option></select></label>
-          <label class="field">Fresh batch times <input name="fresh_batch_times" maxlength="60" placeholder="16:00 local time" /></label>
+          <div class="field">
+            <label for="observation-times">Fresh batch times</label>
+            <input id="observation-times" name="fresh_batch_times" maxlength="60" placeholder="08:00, 16:30" aria-describedby="observation-times-help observation-times-error" data-observation-input />
+            <small id="observation-times-help">Use local 24-hour times, separated by commas.</small>
+            <small id="observation-times-error" class="field-error" hidden></small>
+          </div>
           <label class="field">Availability <select name="availability"><option value="">Select if known</option><option>Available</option><option>Sold out</option><option>No longer sold</option></select></label>
         </fieldset>
         <fieldset class="contribution-fields" data-kind="photo" hidden disabled>
@@ -143,6 +153,7 @@ const scores = [['pastry','Pastry and flakiness'],['filling','Masala and filling
   .github-draft textarea {margin-block-start:.25rem;}
   legend {font-weight:800; margin-block-end:.55rem;}
   [data-form-error]:not(:empty) {margin-block:.55rem; color:var(--rust); font-weight:800;}
+  .field .field-error {color:var(--rust); font-weight:750;}
   .import-status:not(:empty) {margin-block-end:.85rem; padding:.6rem .7rem; border-radius:.5rem; background:var(--sage); color:var(--pine); font-weight:750;}
   .share-paste {display:grid; gap:.48rem; padding:.8rem; border:1px solid var(--line); border-radius:.65rem; background:var(--paper);}
   .share-paste textarea {min-block-size:4rem;}
@@ -166,6 +177,7 @@ const scores = [['pastry','Pastry and flakiness'],['filling','Masala and filling
   import {track} from '../scripts/analytics';
   import {pagePlaceAliases, resolvePlaceId} from '../lib/place-identity';
   import {communityRequest, type Receipt} from '../lib/community';
+  import {invalidObservationField, observationErrors} from '../lib/observation-fields';
   const form = document.querySelector<HTMLFormElement>('[data-contribution]')!;
   const kind = form.querySelector<HTMLSelectElement>('#kind')!;
   const listing = form.querySelector<HTMLSelectElement>('[name=place_id]')!;
@@ -177,6 +189,7 @@ const scores = [['pastry','Pastry and flakiness'],['filling','Masala and filling
   const paste = form.querySelector<HTMLTextAreaElement>('[data-share-paste]')!;
   const clipboard = form.querySelector<HTMLButtonElement>('[data-paste-clipboard]')!;
   const ratings = [...form.querySelectorAll<HTMLInputElement>('.rating-field input')];
+  const observationInputs = [...form.querySelectorAll<HTMLInputElement>('[data-observation-input]')];
   const saveButton = form.querySelector<HTMLButtonElement>('[data-save-draft]')!;
   const savedButton = form.querySelector<HTMLButtonElement>('[data-clear-draft]')!;
   const undoButton = form.querySelector<HTMLButtonElement>('[data-undo-draft]')!;
@@ -205,6 +218,13 @@ const scores = [['pastry','Pastry and flakiness'],['filling','Masala and filling
     input.parentElement!.querySelector('[data-rating-value]')!.textContent = input.value + ' / 10';
   }
   for (const input of ratings) input.addEventListener('input',() => showRating(input));
+  function setObservationError(input: HTMLInputElement, message: string) {
+    const error = form.querySelector<HTMLElement>('#' + input.id + '-error')!;
+    input.setAttribute('aria-invalid',String(Boolean(message)));
+    error.textContent = message;
+    error.hidden = !message;
+  }
+  for (const input of observationInputs) input.addEventListener('input',() => setObservationError(input,''));
   function update() {
     for (const group of form.querySelectorAll<HTMLElement>('[data-kind]')) {
       group.hidden = group.dataset.kind !== kind.value;
@@ -371,9 +391,18 @@ const scores = [['pastry','Pastry and flakiness'],['filling','Masala and filling
   form.addEventListener('submit',async event => {
     event.preventDefault();
     const data = new FormData(form);
-    if (kind.value === 'observation' && !['price','egg_portion','fresh_batch_times','availability'].some(key => String(data.get(key) ?? '').trim())) {
-      alert.textContent = 'Add at least one detail about price, egg portion, batch time, or availability.';
-      return;
+    if (kind.value === 'observation') {
+      if (!['price','egg_portion','fresh_batch_times','availability'].some(key => String(data.get(key) ?? '').trim())) {
+        alert.textContent = 'Add at least one detail about price, egg portion, batch time, or availability.';
+        return;
+      }
+      const invalid = invalidObservationField({price:String(data.get('price') ?? ''),fresh_batch_times:String(data.get('fresh_batch_times') ?? '')});
+      if (invalid) {
+        const input = observationInputs.find(control => control.name === invalid)!;
+        setObservationError(input,observationErrors[invalid]);
+        input.focus();
+        return;
+      }
     }
     if (sending && event.submitter !== githubSubmit) {
       if (sending.disabled) return;
