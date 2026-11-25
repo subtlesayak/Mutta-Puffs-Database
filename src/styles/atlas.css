@@ -118,7 +118,7 @@ section[id] { scroll-margin-block-start: 1.25rem; }
   .header-inner .wordmark { justify-self: start; }
   .masthead .contribute-mobile { display: inline-flex; justify-self: end; min-block-size: 2.75rem; }
   .masthead .contribute-desktop { display: none; }
-  .masthead nav { grid-column: 1 / -1; }
+  .masthead nav { grid-column: 1 / -1; justify-content: center; }
   .grid-3, .fields { grid-template-columns: repeat(2, minmax(0,1fr)); }
 }
 @media (max-width: 32rem) {
