@@ -30,6 +30,13 @@ const stats = [[atlas.stats.places, 'Saved places'], [Object.keys(atlas.stats.co
       <figcaption>A Kerala bakery classic <small>Editorial illustration</small></figcaption>
     </figure>
   </section>
+  <section class="shell heritage-feature" aria-labelledby="heritage-title">
+    <div>
+      <h2 id="heritage-title">Puff Heritage</h2>
+      <p>Explore the Malayalam name, Kerala’s bakery traditions, and the egg puff’s travels. Try the recipe at home.</p>
+    </div>
+    <a class="button" href={path('heritage/')}>Explore Puff Heritage <Icon name="arrow" size={18} /></a>
+  </section>
   <div class="shell stats-band" aria-label="Atlas coverage">
     <dl>{stats.map(([value,label]) => <div><dt>{label}</dt><dd>{formatNumber(Number(value))}</dd></div>)}</dl>
     <a class="text-link" href={path('insights/')}>Explore the data <Icon name="arrow" size={17} /></a>
@@ -69,6 +76,23 @@ const stats = [[atlas.stats.places, 'Saved places'], [Object.keys(atlas.stats.co
   .hero-visual img { aspect-ratio: 1.2; inline-size: 100%; object-fit: cover; }
   .hero-visual figcaption { display: flex; flex-wrap: wrap; justify-content: space-between; gap: .3rem 1rem; padding: .65rem 1rem; font-weight: 750; font-size: .89rem; }
   .hero-visual small { font-weight: 500; font-size: .78rem; }
+  .heritage-feature {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem 2rem;
+    margin-block-end: clamp(1.6rem,4vw,3rem);
+    padding: clamp(1.2rem,4vw,2.2rem);
+    border-radius: var(--round);
+    background: var(--pine);
+    color: var(--cream);
+  }
+  .heritage-feature > div { flex: 1 1 25rem; min-inline-size: 0; }
+  .heritage-feature p { margin-block-start: .5rem; max-inline-size: 58ch; }
+  .heritage-feature .button { background: var(--cream); border-color: var(--cream); color: var(--pine); max-inline-size: 100%; }
+  .heritage-feature .button:hover { background: var(--butter); border-color: var(--butter); }
+  .heritage-feature .button:focus-visible { outline-color: var(--cream); }
   .stats-band { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: .5rem 1rem; padding-block: 1.15rem; border-block: 1px solid var(--line); }
   .stats-band dl { display: flex; flex-wrap: wrap; margin: 0; gap: .65rem clamp(1rem, 5vw, 4rem); }
   .stats-band dl div { display: flex; align-items: baseline; gap: .55rem; flex-wrap: wrap; }
