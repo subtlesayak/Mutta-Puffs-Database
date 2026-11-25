@@ -68,6 +68,18 @@ test('passport imports private visits, shares collections and exports a recap PN
   expect((await image).suggestedFilename()).toBe('puff-wrapped-2026.png');
 });
 
+test('the offline atlas can load the GeoJSON outline if the compact asset is missing', async ({page,context}) => {
+  await context.route('**/basemap.pbf',route => route.fulfill({status:404}));
+  await page.goto('map/?view=list&city=hyderabad');
+  await expect(page.locator('[data-map-list]')).toBeVisible();
+  const supportsWebGL = await page.evaluate(() => Boolean(document.createElement('canvas').getContext('webgl2')));
+  test.skip(!supportsWebGL, 'WebGL 2 is unavailable on this browser.');
+  const fallback = context.waitForEvent('response',{predicate:response => new URL(response.url()).pathname.endsWith('/basemap.geojson')});
+  await page.getByRole('combobox',{name:'View',exact:true}).selectOption('map');
+  expect((await fallback).ok()).toBe(true);
+  await expect(page.locator('[data-map-status]')).toContainText('on the map.');
+});
+
 test.describe('PWA',()=>{
   test.use({serviceWorkers:'allow'});
   test('the homepage opens Puff Heritage while offline', async ({page,context}) => {
@@ -116,6 +128,11 @@ test.describe('PWA',()=>{
     await expect(page.locator('[data-map-list]')).toBeVisible();
     await page.evaluate(async () => {await navigator.serviceWorker.ready;});
     await expect.poll(() => page.evaluate(() => Boolean(navigator.serviceWorker.controller))).toBe(true);
+    const cachedOutlines = await page.evaluate(async () => {
+      const [compact,geojson] = await Promise.all(['basemap.pbf','basemap.geojson'].map(name => caches.match(new URL('../' + name,location.href))));
+      return {compact:Boolean(compact),geojson:Boolean(geojson)};
+    });
+    expect(cachedOutlines).toEqual({compact:true,geojson:false});
     const supportsWebGL = await page.evaluate(() => Boolean(document.createElement('canvas').getContext('webgl2')));
     test.skip(!supportsWebGL, 'WebGL 2 is unavailable on this browser.');
     try {

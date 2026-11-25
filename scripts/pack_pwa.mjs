@@ -8,7 +8,7 @@ const base = '/Mutta-Puffs-Database/';
 const languagePages = locales.filter(locale => locale.id !== 'en').map(locale => locale.id + '/');
 const offlinePages = ['./','contribute/','share/','offline/','guide/','heritage/','map/','pit-stops/','passport/','wrapped/','roulette/','languages/',...languagePages];
 const pageFiles = new Map(offlinePages.map(route => [route, route === './' ? 'index.html' : route + 'index.html']));
-const paths = new Set([...pageFiles.keys(),'manifest.webmanifest','icons/puff-192.png','icons/puff-512.png','icons/puff-maskable.png','puff.svg','api/v1/places.json','api/v1/place-metrics.json','api/v1/places.geojson','api/v1/cities.json','api/v1/trails.json','basemap.geojson','images/egg-puff.webp']);
+const paths = new Set([...pageFiles.keys(),'manifest.webmanifest','icons/puff-192.png','icons/puff-512.png','icons/puff-maskable.png','puff.svg','api/v1/places.json','api/v1/place-metrics.json','api/v1/places.geojson','api/v1/cities.json','api/v1/trails.json','basemap.pbf','images/egg-puff.webp']);
 for (const file of pageFiles.values()) {
   const html = await readFile(resolve(dist,file),'utf8');
   for (const match of html.matchAll(/(?:src|href)="([^"]+)"/g)) {

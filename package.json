@@ -7,7 +7,7 @@
     "node": ">=22.23.4"
   },
   "scripts": {
-    "generate": "python3 scripts/build_atlas.py",
+    "generate": "python3 scripts/build_atlas.py && node scripts/pack_basemap.mjs",
     "dev": "npm run generate && astro dev",
     "build": "npm run generate && astro build && node scripts/pack_pwa.mjs",
     "check": "npm run generate && astro check",
@@ -24,7 +24,9 @@
     "@googlemaps/markerclusterer": "^2.6.2",
     "astro": "^7.4.13",
     "fuse.js": "^7.1.0",
-    "maplibre-gl": "^6.19.0"
+    "geobuf": "^4.0.0",
+    "maplibre-gl": "^6.19.0",
+    "pbf": "^5.2.0"
   },
   "devDependencies": {
     "@astrojs/check": "^0.9.5",
