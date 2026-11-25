@@ -10,6 +10,7 @@ export type Locale = typeof locales[number]['id'];
 const en = {
   explore:'Explore', map:'Puff Map', cities:'Cities', guide:'Puff Guide', insights:'Insights', contribute:'Contribute',
   menu:'Menu', mainNav:'Main navigation', skip:'Skip to content', language:'Language', about:'About', data:'Open data',
+  projectNav:'Project', footerIntro:'A community atlas for one very good snack.',
   head:'Find an egg puff near you', intro:'Explore bakeries, cafés and stalls saved by the community.',
   directory:'The directory', find:'Find a puff stop', help:'Search for a place, choose a city or use your location.',
   search:'Search places', placeholder:'Bakery, city or neighbourhood', region:'State or country', allRegions:'All regions',
@@ -26,6 +27,7 @@ type Labels = typeof en;
 const ml: Labels = {
   explore:'തിരയുക', map:'പഫ് ഭൂപടം', cities:'നഗരങ്ങൾ', guide:'പഫ് ഗൈഡ്', insights:'കണക്കുകൾ', contribute:'സംഭാവന ചെയ്യുക',
   menu:'മെനു', mainNav:'പ്രധാന നാവിഗേഷൻ', skip:'ഉള്ളടക്കത്തിലേക്ക് പോകുക', language:'ഭാഷ', about:'പദ്ധതിയെക്കുറിച്ച്', data:'തുറന്ന ഡാറ്റ',
+  projectNav:'പദ്ധതി', footerIntro:'മുട്ട പഫ്സ് കിട്ടുന്ന ഇടങ്ങളുടെ കൂട്ടായ്മാ ഭൂപടം.',
   head:'അടുത്തുള്ള മുട്ട പഫ്സ് കണ്ടെത്താം', intro:'കൂട്ടായ്മ ചേർത്ത ബേക്കറികളും കഫേകളും കടകളും കാണൂ.',
   directory:'സ്ഥലങ്ങളുടെ പട്ടിക', find:'പഫ് കിട്ടുന്ന ഇടം കണ്ടെത്തുക', help:'സ്ഥലം തിരയുക, നഗരം തിരഞ്ഞെടുക്കുക, അല്ലെങ്കിൽ നിങ്ങളുടെ ലൊക്കേഷൻ ഉപയോഗിക്കുക.',
   search:'സ്ഥലങ്ങൾ തിരയുക', placeholder:'ബേക്കറി, നഗരം അല്ലെങ്കിൽ പ്രദേശം', region:'സംസ്ഥാനം അല്ലെങ്കിൽ രാജ്യം', allRegions:'എല്ലാ പ്രദേശങ്ങളും',
@@ -41,6 +43,7 @@ const ml: Labels = {
 const hi: Labels = {
   explore:'खोजें', map:'पफ का नक्शा', cities:'शहर', guide:'पफ गाइड', insights:'आँकड़े', contribute:'योगदान दें',
   menu:'मेनू', mainNav:'मुख्य नेविगेशन', skip:'सामग्री पर जाएँ', language:'भाषा', about:'परियोजना के बारे में', data:'खुला डेटा',
+  projectNav:'परियोजना', footerIntro:'समुदाय का बनाया एग पफ की जगहों का नक्शा।',
   head:'अपने पास एग पफ खोजें', intro:'समुदाय की सुझाई बेकरी, कैफ़े और दुकानों को देखें।',
   directory:'जगहों की सूची', find:'पफ की दुकान खोजें', help:'किसी जगह को खोजें, शहर चुनें या अपनी लोकेशन इस्तेमाल करें।',
   search:'जगह खोजें', placeholder:'बेकरी, शहर या इलाका', region:'राज्य या देश', allRegions:'सभी क्षेत्र',
@@ -57,6 +60,7 @@ const ta: Labels = {
   explore:'தேடுங்கள்', map:'பஃப் வரைபடம்', cities:'நகரங்கள்', guide:'பஃப் வழிகாட்டி', insights:'புள்ளிவிவரங்கள்', contribute:'பங்களியுங்கள்',
   menu:'பட்டி', mainNav:'முதன்மை வழிசெலுத்தல்', skip:'உள்ளடக்கத்திற்குச் செல்லவும்', language:'மொழி', about:'திட்டத்தைப் பற்றி', data:'திறந்த தரவு',
   head:'அருகில் முட்டை பஃப் தேடுங்கள்', intro:'சமூகம் சேகரித்த பேக்கரிகள், கஃபேக்கள் மற்றும் கடைகளைப் பாருங்கள்.',
+  projectNav:'திட்டம்', footerIntro:'முட்டை பஃப் கிடைக்கும் இடங்களுக்கான சமூக வரைபடம்.',
   directory:'இடங்களின் பட்டியல்', find:'பஃப் கிடைக்கும் இடத்தைத் தேடுங்கள்', help:'இடத்தைத் தேடுங்கள், நகரத்தைத் தேர்ந்தெடுங்கள் அல்லது உங்கள் இருப்பிடத்தைப் பயன்படுத்துங்கள்.',
   search:'இடங்களைத் தேடுங்கள்', placeholder:'பேக்கரி, நகரம் அல்லது பகுதி', region:'மாநிலம் அல்லது நாடு', allRegions:'அனைத்துப் பகுதிகளும்',
   district:'இந்திய மாவட்டம்', allDistricts:'அனைத்து மாவட்டங்களும்', unknownCountry:'நாடு குறிப்பிடப்படவில்லை', verification:'சரிபார்ப்பு',
@@ -71,6 +75,7 @@ const ta: Labels = {
 const kn: Labels = {
   explore:'ಹುಡುಕಿ', map:'ಪಫ್ ನಕ್ಷೆ', cities:'ನಗರಗಳು', guide:'ಪಫ್ ಮಾರ್ಗದರ್ಶಿ', insights:'ಅಂಕಿಅಂಶಗಳು', contribute:'ಕೊಡುಗೆ ನೀಡಿ',
   menu:'ಮೆನು', mainNav:'ಮುಖ್ಯ ಸಂಚರಣೆ', skip:'ವಿಷಯಕ್ಕೆ ಹೋಗಿ', language:'ಭಾಷೆ', about:'ಯೋಜನೆಯ ಬಗ್ಗೆ', data:'ಮುಕ್ತ ದತ್ತಾಂಶ',
+  projectNav:'ಯೋಜನೆ', footerIntro:'ಮೊಟ್ಟೆ ಪಫ್ ಸಿಗುವ ಸ್ಥಳಗಳ ಸಮುದಾಯ ನಕ್ಷೆ.',
   head:'ಹತ್ತಿರದ ಮೊಟ್ಟೆ ಪಫ್ ಹುಡುಕಿ', intro:'ಸಮುದಾಯ ಸೇರಿಸಿದ ಬೇಕರಿಗಳು, ಕೆಫೆಗಳು ಮತ್ತು ಅಂಗಡಿಗಳನ್ನು ನೋಡಿ.',
   directory:'ಸ್ಥಳಗಳ ಪಟ್ಟಿ', find:'ಪಫ್ ಸಿಗುವ ಸ್ಥಳ ಹುಡುಕಿ', help:'ಸ್ಥಳ ಹುಡುಕಿ, ನಗರವನ್ನು ಆರಿಸಿ ಅಥವಾ ನಿಮ್ಮ ಸ್ಥಳವನ್ನು ಬಳಸಿ.',
   search:'ಸ್ಥಳಗಳನ್ನು ಹುಡುಕಿ', placeholder:'ಬೇಕರಿ, ನಗರ ಅಥವಾ ಪ್ರದೇಶ', region:'ರಾಜ್ಯ ಅಥವಾ ದೇಶ', allRegions:'ಎಲ್ಲ ಪ್ರದೇಶಗಳು',

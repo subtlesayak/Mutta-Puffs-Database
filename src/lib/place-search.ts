@@ -27,6 +27,14 @@ const aliases: Record<string, Partial<Record<Locale, string>>> = {
   'Tamil Nadu': {ml:'തമിഴ്നാട്',hi:'तमिलनाडु',ta:'தமிழ்நாடு',kn:'ತಮಿಳುನಾಡು'},
   Karnataka: {ml:'കർണാടക',hi:'कर्नाटक',ta:'கர்நாடகம்',kn:'ಕರ್ನಾಟಕ'},
   Telangana: {ml:'തെലങ്കാന',hi:'तेलंगाना',ta:'தெலங்கானா',kn:'ತೆಲಂಗಾಣ'},
+  India: {ml:'ഇന്ത്യ',hi:'भारत',ta:'இந்தியா',kn:'ಭಾರತ'},
+  Haryana: {ml:'ഹരിയാന',hi:'हरियाणा',ta:'ஹரியானா',kn:'ಹರಿಯಾಣ'},
+  Maharashtra: {ml:'മഹാരാഷ്ട്ര',hi:'महाराष्ट्र',ta:'மகாராஷ்டிரா',kn:'ಮಹಾರಾಷ್ಟ್ರ'},
+  Puducherry: {en:'Pondicherry',ml:'പുതുച്ചേരി',hi:'पुदुचेरी',ta:'புதுச்சேரி',kn:'ಪುದುಚೇರಿ'},
+  Oman: {ml:'ഒമാൻ',hi:'ओमान',ta:'ஓமன்',kn:'ಒಮಾನ್'},
+  'Saudi Arabia': {ml:'സൗദി അറേബ്യ',hi:'सऊदी अरब',ta:'சவுதி அரேபியா',kn:'ಸೌದಿ ಅರೇಬಿಯಾ'},
+  'United Arab Emirates': {en:'UAE',ml:'യുണൈറ്റഡ് അറബ് എമിറേറ്റ്സ്',hi:'संयुक्त अरब अमीरात',ta:'ஐக்கிய அரபு அமீரகம்',kn:'ಯುನೈಟೆಡ್ ಅರಬ್ ಎಮಿರೇಟ್ಸ್'},
+  'United Kingdom': {en:'UK',ml:'യുണൈറ്റഡ് കിങ്ഡം',hi:'यूनाइटेड किंगडम',ta:'ஐக்கிய இராச்சியம்',kn:'ಯುನೈಟೆಡ್ ಕಿಂಗ್‌ಡಮ್'},
 };
 
 export const searchText = (value: string) => value.normalize('NFC').replace(/\u200c|\u200d/g,'').trim();

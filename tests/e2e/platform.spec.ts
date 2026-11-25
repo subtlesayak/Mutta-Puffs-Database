@@ -3,10 +3,25 @@ import {expect,test} from '@playwright/test';
 const examplePlace = 'mpdb-7b2be6dd7ad3';
 
 test('all four localized finders accept native-script place queries', async ({page}) => {
+  const copy: Record<string,string[]> = {
+    ml:['ബേക്കറി അല്ലെങ്കിൽ മിഠായിക്കട','വിലയും പഫ് സ്കോറും','ഏകദേശ പിൻ','Google Maps ൽ തുറക്കുക'],
+    hi:['बेकरी या मिठाई की दुकान','कीमत और पफ स्कोर','अनुमानित पिन','Google Maps में खोलें'],
+    ta:['பேக்கரி அல்லது இனிப்புக் கடை','விலையும் பஃப் மதிப்பெண்ணும்','தோராயமான இடக்குறி','Google Maps இல் திறக்கவும்'],
+    kn:['ಬೇಕರಿ ಅಥವಾ ಸಿಹಿತಿಂಡಿ ಅಂಗಡಿ','ಬೆಲೆ ಮತ್ತು ಪಫ್ ಅಂಕ','ಅಂದಾಜು ಪಿನ್','Google Maps ನಲ್ಲಿ ತೆರೆಯಿರಿ'],
+  };
   for (const [locale, city] of [['ml','ഹൈദരാബാദ്'],['hi','हैदराबाद'],['ta','ஹைதராபாத்'],['kn','ಹೈದರಾಬಾದ್']]) {
     await page.goto(locale + '/?q=' + encodeURIComponent(city));
     await expect(page.locator('html')).toHaveAttribute('lang',locale);
-    await expect(page.locator('[data-results]')).toContainText("Sam's Bakers");
+    const [bakery,metrics,pin,directions] = copy[locale];
+    await expect(page.locator('[name=category] option[value="Bakery or confectionery"]')).toHaveText(bakery);
+    await expect(page.locator('.metric-filters summary')).toHaveText(metrics);
+    const card = page.locator('[data-results] li').filter({has:page.getByRole('link',{name:"Sam's Bakers",exact:true})});
+    await expect(card).toBeVisible();
+    await expect(card).toContainText(city);
+    await expect(card.locator('.tags')).toContainText(pin);
+    await expect(card.locator('[data-directions]')).toHaveText(directions);
+    await expect(page.locator('.masthead .wordmark')).toHaveAttribute('href',new URL(page.url()).pathname);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(page.viewportSize()!.width);
   }
 });
 
@@ -64,6 +79,19 @@ test.describe('PWA',()=>{
       await context.setOffline(true);
       await page.reload();
       await expect(page.locator('[data-map-list]')).toContainText("Sam's Bakers");
+    } finally {
+      await context.setOffline(false);
+    }
+  });
+  test('a localized finder is available from the offline cache', async ({page,context}) => {
+    await page.goto('./');
+    await page.evaluate(async () => {await navigator.serviceWorker.ready;});
+    await expect.poll(()=>page.evaluate(()=>Boolean(navigator.serviceWorker.controller))).toBe(true);
+    try {
+      await context.setOffline(true);
+      await page.goto('ml/?q=' + encodeURIComponent('ഹൈദരാബാദ്'));
+      await expect(page.getByRole('heading',{name:'അടുത്തുള്ള മുട്ട പഫ്സ് കണ്ടെത്താം',exact:true})).toBeVisible();
+      await expect(page.locator('[data-results]')).toContainText("Sam's Bakers");
     } finally {
       await context.setOffline(false);
     }
