@@ -1,0 +1,127 @@
+---
+import Icon from './Icon.astro';
+import {path} from '../lib/format';
+import type {Locale} from '../lib/locales';
+
+interface Props {locale?: Locale}
+const {locale = 'en'} = Astro.props;
+const copy = {
+  en: {
+    title: 'Puff Heritage',
+    intro: 'What does mutta mean? Follow the egg puff from Kerala’s bakery counters to kitchens abroad, and bake a batch of your own.',
+    read: 'Read the full story',
+    language: '',
+    name: 'The Malayalam name',
+    origins: 'Kerala’s bakeries',
+    recipe: 'The egg puff recipe',
+    travels: 'Puffs abroad',
+  },
+  ml: {
+    title: 'മുട്ട പഫ്സിന്റെ കഥ',
+    intro: 'മലയാളപ്പേരിന്റെ അർഥം മുതൽ കേരളത്തിലെ ബേക്കറികളുടെയും വിദേശത്തെ മുട്ട പഫ്സിന്റെയും കഥകൾ വരെ. വീട്ടിൽ ഉണ്ടാക്കാനുള്ള പാചകക്കുറിപ്പും വായിക്കാം.',
+    read: 'കഥ മുഴുവനായി വായിക്കൂ',
+    language: 'ലേഖനം ഇംഗ്ലീഷിലാണ്.',
+    name: 'മലയാളപ്പേര്',
+    origins: 'കേരളത്തിലെ ബേക്കറികൾ',
+    recipe: 'പാചകക്കുറിപ്പ്',
+    travels: 'വിദേശത്ത് പഫ്സ്',
+  },
+  hi: {
+    title: 'एग पफ की कहानी',
+    intro: 'मलयालम नाम का मतलब जानें, केरल की बेकरियों से विदेशों तक एग पफ का सफ़र पढ़ें और इसे घर पर बनाएँ।',
+    read: 'पूरी कहानी पढ़ें',
+    language: 'लेख अंग्रेज़ी में है।',
+    name: 'मलयालम नाम',
+    origins: 'केरल की बेकरियाँ',
+    recipe: 'एग पफ की रेसिपी',
+    travels: 'विदेशों में एग पफ',
+  },
+  ta: {
+    title: 'முட்டை பஃப்பின் கதை',
+    intro: 'மலையாளப் பெயரின் பொருளையும், கேரள பேக்கரிகளில் இருந்து வெளிநாடுகளுக்கு முட்டை பஃப் சென்ற கதையையும் படியுங்கள். வீட்டில் செய்யும் முறையையும் தெரிந்துகொள்ளுங்கள்.',
+    read: 'முழுக் கதையைப் படியுங்கள்',
+    language: 'கட்டுரை ஆங்கிலத்தில் உள்ளது.',
+    name: 'மலையாளப் பெயர்',
+    origins: 'கேரள பேக்கரிகள்',
+    recipe: 'செய்முறை',
+    travels: 'வெளிநாடுகளில் பஃப்',
+  },
+  kn: {
+    title: 'ಮೊಟ್ಟೆ ಪಫ್‌ನ ಕಥೆ',
+    intro: 'ಮಲಯಾಳಂ ಹೆಸರಿನ ಅರ್ಥ ತಿಳಿಯಿರಿ, ಕೇರಳದ ಬೇಕರಿಗಳಿಂದ ವಿದೇಶಗಳಿಗೆ ಮೊಟ್ಟೆ ಪಫ್ ಸಾಗಿದ ಕಥೆ ಓದಿ ಮತ್ತು ಅದನ್ನು ಮನೆಯಲ್ಲೇ ತಯಾರಿಸಿ.',
+    read: 'ಪೂರ್ಣ ಕಥೆ ಓದಿ',
+    language: 'ಲೇಖನ ಇಂಗ್ಲಿಷ್‌ನಲ್ಲಿದೆ.',
+    name: 'ಮಲಯಾಳಂ ಹೆಸರು',
+    origins: 'ಕೇರಳದ ಬೇಕರಿಗಳು',
+    recipe: 'ಪಫ್ ಮಾಡುವ ವಿಧಾನ',
+    travels: 'ವಿದೇಶಗಳಲ್ಲಿ ಪಫ್',
+  },
+}[locale];
+const chapters = ['name', 'origins', 'recipe', 'travels'] as const;
+const heritage = path('heritage/');
+---
+<section class="shell heritage-feature" id="puff-heritage" aria-labelledby="heritage-title">
+  <div class="heritage-intro">
+    <h2 id="heritage-title">{copy.title}</h2>
+    <p>{copy.intro}</p>
+    {copy.language && <p class="language-note">{copy.language}</p>}
+    <a class="button" href={heritage} hreflang="en">{copy.read} <Icon name="arrow" size={18} /></a>
+  </div>
+  <ul class="chapter-links" role="list">
+    {chapters.map(chapter => <li><a href={heritage + '#' + chapter} hreflang="en">{copy[chapter]}</a></li>)}
+  </ul>
+</section>
+
+<style>
+  .heritage-feature {
+    container-type: inline-size;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: clamp(1.25rem, 4vw, 3rem);
+    margin-block-end: clamp(1.6rem, 4vw, 3rem);
+    padding: clamp(1.2rem, 4vw, 2.2rem);
+    border-radius: var(--round);
+    background: var(--pine);
+    color: var(--cream);
+  }
+  .heritage-intro { flex: 1 1 20rem; min-inline-size: 0; }
+  .heritage-intro p { margin-block-start: .55rem; max-inline-size: 46ch; }
+  .heritage-intro .language-note { font-size: .875rem; }
+  .heritage-intro .button {
+    max-inline-size: 100%;
+    margin-block-start: 1rem;
+    background: var(--cream);
+    border-color: var(--cream);
+    color: var(--pine);
+  }
+  .heritage-intro .button:hover { background: var(--butter); border-color: var(--butter); }
+  .heritage-intro .button :global(svg) { flex-shrink: 0; }
+  .heritage-feature a:focus-visible { outline-color: var(--cream); }
+  .chapter-links {
+    flex: 1 1 18rem;
+    min-inline-size: 0;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: .65rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .chapter-links a {
+    display: flex;
+    align-items: center;
+    min-block-size: 100%;
+    padding: .7rem .85rem;
+    border: 1px solid var(--control);
+    border-radius: .55rem;
+    color: var(--cream);
+    font-weight: 750;
+    line-height: 1.4;
+    overflow-wrap: anywhere;
+  }
+  .chapter-links a:hover { background: var(--pine-dark); }
+  @container (width < 18.65rem) {
+    .chapter-links { grid-template-columns: minmax(0, 1fr); }
+  }
+</style>
