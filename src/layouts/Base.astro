@@ -12,6 +12,8 @@ const {title, description, section, noindex = false} = Astro.props;
 const fullTitle = section === 'Explore' ? 'Mutta Puffs Everywhere · The egg puff atlas' : title + ' · Mutta Puffs Everywhere';
 const canonical = new URL(Astro.url.pathname, siteUrl.origin);
 const nav = [['Explore', ''], ['Puff Map', 'map/'], ['Cities', 'cities/'], ['Puff Guide', 'guide/'], ['Insights', 'insights/']];
+const contributeHref = path('contribute/');
+const contributeCurrent = canonical.pathname === contributeHref ? 'page' : undefined;
 const activeSection = section ?? (guideDestinations.some(({route}) => canonical.pathname.startsWith(path(route))) ? 'Puff Guide' : undefined);
 ---
 <!doctype html>
@@ -38,9 +40,10 @@ const activeSection = section ?? (guideDestinations.some(({route}) => canonical.
     <header class="masthead">
       <div class="shell header-inner">
         <a href={path()} class="wordmark"><span class="brand-icon"><Icon name="puff" size={24} /></span><span>Mutta Puffs<small>Everywhere</small></span></a>
+        <a class="button small contribute-mobile" href={contributeHref} aria-current={contributeCurrent}>Contribute <Icon name="arrow" size={16} /></a>
         <nav aria-label="Main navigation">
           {nav.map(([label, route]) => <a href={path(route)} aria-current={canonical.pathname === path(route) ? 'page' : activeSection === label ? 'true' : undefined}>{label}</a>)}
-          <a class="button small" href={path('contribute/')} aria-current={canonical.pathname === path('contribute/') ? 'page' : undefined}>Contribute <Icon name="arrow" size={16} /></a>
+          <a class="button small contribute-desktop" href={contributeHref} aria-current={contributeCurrent}>Contribute <Icon name="arrow" size={16} /></a>
         </nav>
       </div>
     </header>

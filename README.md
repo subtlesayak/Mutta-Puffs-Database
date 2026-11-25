@@ -6,7 +6,7 @@
 
 Use your device location or choose a city, filter by an Indian district, and open a place in Google Maps, Apple Maps, or OpenStreetMap. Each listing has a permanent link with its source and coordinate accuracy.
 
-The [Puff Guide](https://subtlesayak.github.io/Mutta-Puffs-Database/guide/) brings together curated trails, a nearby Roulette draw, and Puff Heritage stories. Puff Passport saves shops and visits in the current browser. Puff Wrapped uses those visits to make an annual recap you can share.
+The [Puff Guide](https://subtlesayak.github.io/Mutta-Puffs-Database/guide/) brings together curated trails and a nearby Roulette draw. [Puff Heritage](https://subtlesayak.github.io/Mutta-Puffs-Database/heritage/) covers the egg puff’s name, Kerala bakery history, a home recipe, and stories from around the world. Puff Passport saves shops and visits in the current browser. Puff Wrapped uses those visits to make an annual recap you can share.
 
 The [Puff Leaderboard](https://subtlesayak.github.io/Mutta-Puffs-Database/leaderboard/) ranks places with at least three approved, first-hand reviews using confidence-adjusted scores. The [Mutta Puff Index](https://subtlesayak.github.io/Mutta-Puffs-Database/price-index/) publishes monthly medians by city and currency and only computes an index for samples of at least three shops. Price and score filters use approved reports.
 

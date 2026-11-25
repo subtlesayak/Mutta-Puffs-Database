@@ -1,0 +1,46 @@
+---
+interface Props {
+  place: string;
+  title: string;
+  featured?: boolean;
+  sources: { href: string; label: string }[];
+}
+
+const { place, title, featured = false, sources } = Astro.props;
+---
+<article class:list={['panel', 'story', { featured }]}>
+  <header>
+    <p class="kicker">{place}</p>
+    <h3>{title}</h3>
+  </header>
+  <slot />
+  <ul class="sources" aria-label="Sources and related links">
+    {sources.map(({ href, label }) => (
+      <li><a href={href}>{label}</a></li>
+    ))}
+  </ul>
+</article>
+<style>
+  .story { display: grid; align-content: start; gap: .8rem; }
+  .story h3 {
+    margin-block-start: .28rem;
+    font-size: clamp(1.45rem, 2.55vw, 2.1rem);
+    text-wrap: pretty;
+  }
+  .featured { background: var(--butter); }
+  .sources {
+    display: grid;
+    gap: .15rem;
+    list-style: none;
+    margin: .15rem 0 0;
+    padding: 0;
+    font-size: .875rem;
+    font-weight: 750;
+  }
+  .sources a {
+    display: inline-block;
+    padding-block: .25rem;
+    min-block-size: 1.75rem;
+    overflow-wrap: anywhere;
+  }
+</style>
