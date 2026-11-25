@@ -68,7 +68,7 @@ const places = [...atlas.places].sort((a,b) => a.name.localeCompare(b.name));
       </section>
       {communityConfigured && <section class="panel backup" aria-labelledby="sync-title">
         <h2 id="sync-title">Sync an encrypted copy</h2>
-        <p>Use the same private key on both devices. Sync adds new visits and saved places. Removing an item from one device does not remove it from the backup.</p>
+        <p>Use the same private key on both devices. Each device picks up changes and removals when you sync. If you undo a removed visit or collection, sync again.</p>
         <form class="sync-form" data-passport-sync>
           <label class="field">Private sync key <input name="key" type="password" maxlength="43" required autocomplete="off" autocapitalize="none" /></label>
           <div class="actions">

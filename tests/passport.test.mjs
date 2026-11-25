@@ -9,7 +9,9 @@ test('saved places and private visits survive independent storage updates', () =
   toggleSaved(storage,'p1');
   changePassport(storage, book => book.visits.push(visit));
   toggleSaved(storage,'p1');
-  assert.deepEqual(readPassport(storage),{saved:[],visits:[visit]});
+  assert.deepEqual(readPassport(storage),{saved:[],visits:[visit],changes:{
+    saved:{p1:{revision:2,removed:true}},visits:{v1:{revision:1,removed:false}},
+  }});
 });
 
 test('Wrapped counts unique places, excludes other years, and separates currencies', () => {

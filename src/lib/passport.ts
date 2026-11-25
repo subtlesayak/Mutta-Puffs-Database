@@ -1,5 +1,6 @@
 import {resolvePlaceId} from './place-identity.ts';
 import type {PlaceAliases} from './place-identity.ts';
+import {passportAtChanges, passportMembers, readPassportChanges, recordPassportChanges, type PassportChanges} from './passport-changes.ts';
 
 export interface Visit {
   id: string;
@@ -10,7 +11,7 @@ export interface Visit {
 }
 
 export interface Collection {id: string; name: string; placeIds: string[]}
-export interface Passport {saved: string[]; visits: Visit[]; collections?: Collection[]}
+export interface Passport {saved: string[]; visits: Visit[]; collections?: Collection[]; changes?: PassportChanges}
 interface Destination {name: string; city: string | null; country: string | null}
 type StorageAccess = Pick<Storage,'getItem' | 'setItem'>;
 const key = 'mpdb-passport-v1';
@@ -27,20 +28,28 @@ export function readPassport(storage: StorageAccess, aliases: PlaceAliases = {})
   if (!saved) return {saved:[],visits:[]};
   const data = JSON.parse(saved) as Passport;
   if (!Array.isArray(data.saved) || !Array.isArray(data.visits)) throw new Error('Passport could not be read');
-  return {
+  const changes = readPassportChanges(data.changes,aliases);
+  return passportAtChanges({
     saved: [...new Set(data.saved.map(id => resolvePlaceId(id, aliases)))],
     visits: data.visits.map(visit => ({...visit,placeId:resolvePlaceId(visit.placeId, aliases)})),
     ...(Array.isArray(data.collections) ? {collections:data.collections.map(collection=>({
       ...collection,placeIds:[...new Set(collection.placeIds.map(id=>resolvePlaceId(id,aliases)))],
     }))} : {}),
-  };
+    ...(changes && {changes}),
+  });
+}
+
+export function writePassport(storage: StorageAccess, passport: Passport) {
+  storage.setItem(key,JSON.stringify(passport));
+  return passport;
 }
 
 export function changePassport(storage: StorageAccess, update: (passport: Passport) => void, aliases: PlaceAliases = {}) {
   const passport = readPassport(storage, aliases);
+  const before = passportMembers(passport);
   update(passport);
-  storage.setItem(key,JSON.stringify(passport));
-  return passport;
+  passport.changes = recordPassportChanges(before,passport);
+  return writePassport(storage,passport);
 }
 
 export function toggleSaved(storage: StorageAccess, id: string, aliases: PlaceAliases = {}) {

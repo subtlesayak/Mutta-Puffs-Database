@@ -36,6 +36,8 @@ An API hostname is optional if the proxy can serve a publicly trusted certificat
 
 Check that the HTTPS `/health` route returns `{"ok":true}`. Then set `PUBLIC_COMMUNITY_API_URL` to the HTTPS API root in the repository’s Actions variables and redeploy Pages. To exercise the account-free form and Passport sync with a local test database, run `MPDB_TEST_COMMUNITY=1 npm run test:e2e` after installing the Playwright Chromium browser.
 
+Encrypted Passport snapshots carry the history needed to sync removals. Browsers running the latest atlas can still open older encrypted snapshots and read existing JSON backups. Once a snapshot has been updated, refresh older installed copies before syncing them. Downloaded JSON backups contain the current Passport records and can be imported to restore them explicitly.
+
 Open `/moderation/` under the atlas URL and enter the moderation key to review the queue. Check consent and evidence, then approve or decline. For an approved entry, open its GitHub record and follow the publication steps above. Put the GitHub issue or PR in the relevant source field. Use `source.reference` for new places, `verification.reference` for corrections, the photo’s `source` for images, and `source` for reviews and observations. For a Heritage story, include the link in the `HeritageStory` component’s sources.
 
 After Pages deploys, enter that same source link and choose **Verify publication**. The API checks the published record before changing the receipt to **Published**. Contributors can check the outcome with their private receipt code.

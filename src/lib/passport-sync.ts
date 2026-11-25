@@ -39,7 +39,7 @@ export interface SyncSnapshot {revision:number;nonce?:string;ciphertext?:string}
 
 export async function sealPassport(passport: Passport, key: CryptoKey, revision: number): Promise<SyncSnapshot> {
   const nonce = crypto.getRandomValues(new Uint8Array(12));
-  const plain = encode.encode(formatPassportBackup(passport));
+  const plain = encode.encode(formatPassportBackup(passport,2));
   if (plain.length > passportBackupLimit) throw new Error('This passport is too large to sync. Download a local backup instead.');
   const encrypted = await crypto.subtle.encrypt({name:'AES-GCM',iv:nonce,additionalData},key,plain);
   return {revision,nonce:base64url(nonce),ciphertext:base64url(new Uint8Array(encrypted))};
