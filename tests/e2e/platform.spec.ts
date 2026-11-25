@@ -70,6 +70,21 @@ test('passport imports private visits, shares collections and exports a recap PN
 
 test.describe('PWA',()=>{
   test.use({serviceWorkers:'allow'});
+  test('the homepage opens Puff Heritage while offline', async ({page,context}) => {
+    await page.goto('./');
+    const feature = page.getByRole('region',{name:'Puff Heritage'});
+    await expect(feature.getByRole('heading',{name:'Puff Heritage',exact:true})).toBeVisible();
+    await page.evaluate(async () => {await navigator.serviceWorker.ready;});
+    await expect.poll(()=>page.evaluate(()=>Boolean(navigator.serviceWorker.controller))).toBe(true);
+    try {
+      await context.setOffline(true);
+      const link = feature.getByRole('link',{name:'Explore Puff Heritage'});
+      await link.press('Enter');
+      await expect(page.getByRole('heading',{name:'The story of the egg puff',exact:true})).toBeVisible();
+    } finally {
+      await context.setOffline(false);
+    }
+  });
   test('a cached city list is usable offline', async ({page,context}) => {
     await page.goto('map/?view=list&city=hyderabad');
     await expect(page.locator('[data-map-list]')).toBeVisible();
